@@ -1,3 +1,4 @@
+
 "use client";
 import { useState, type FormEvent } from 'react';
 import { signInWithEmailAndPassword, type Auth } from 'firebase/auth';
@@ -41,14 +42,14 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
       onClose();
     } catch (err: any) {
       console.error("Firebase Auth Error:", err);
+      let userFriendlyError = 'Error al iniciar sesión. Inténtelo de nuevo.';
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setError('Correo o contraseña incorrectos.');
+        userFriendlyError = 'Correo o contraseña incorrectos.';
       } else if (err.code === 'auth/invalid-email') {
-        setError('El formato del correo electrónico no es válido.');
-      } else {
-        setError('Error al iniciar sesión. Inténtelo de nuevo.');
+        userFriendlyError = 'El formato del correo electrónico no es válido.';
       }
-      toast({ title: 'Error de inicio de sesión', description: error || 'Ocurrió un error.', variant: 'destructive' });
+      setError(userFriendlyError);
+      toast({ title: 'Error de inicio de sesión', description: userFriendlyError, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -58,54 +59,54 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md glass-effect text-white border-gray-700">
+      <DialogContent className="sm:max-w-md glass-effect text-foreground border-border/30">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-white">CustomsEX-p</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-foreground">CustomsEX-p</DialogTitle>
           <button
             onClick={onClose}
             className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
             aria-label="Cerrar"
           >
-            <X className="h-6 w-6 text-white" />
+            <X className="h-6 w-6 text-muted-foreground" />
           </button>
         </DialogHeader>
-        <DialogDescription className="text-blue-200">
+        <DialogDescription className="text-muted-foreground">
           Ingrese sus credenciales para acceder al sistema.
         </DialogDescription>
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
           <div>
-            <Label htmlFor="email-login" className="block text-sm font-medium text-white mb-1">Correo Electrónico</Label>
+            <Label htmlFor="email-login" className="block text-sm font-medium text-foreground mb-1">Correo Electrónico</Label>
             <Input
               id="email-login"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 border-gray-500 bg-white/20 text-white placeholder-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-4 py-3 text-foreground placeholder:text-muted-foreground border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="usuario@ejemplo.com"
             />
           </div>
           <div>
-            <Label htmlFor="password-login" className="block text-sm font-medium text-white mb-1">Contraseña</Label>
+            <Label htmlFor="password-login" className="block text-sm font-medium text-foreground mb-1">Contraseña</Label>
             <Input
               id="password-login"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-3 border-gray-500 bg-white/20 text-white placeholder-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-4 py-3 text-foreground placeholder:text-muted-foreground border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="********"
             />
           </div>
-           {error && <p className="text-sm text-red-400">{error}</p>}
-          <div className="text-xs text-blue-300">
+           {error && <p className="text-sm text-destructive">{error}</p>}
+          <div className="text-xs text-muted-foreground">
             Para solicitar acceso, contacte a Coordinación ACONIC: <br />
-            <Link href="https://wa.me/+50583956505" target="_blank" className="text-blue-400 underline">
+            <Link href="https://wa.me/+50583956505" target="_blank" className="text-primary hover:text-primary/80 underline">
               WhatsApp (+505 8395 6505)
             </Link>
           </div>
           <DialogFooter>
-            <Button type="submit" className="btn-primary text-white px-8 py-3 rounded-md font-medium w-full" disabled={loading}>
+            <Button type="submit" className="btn-primary text-primary-foreground px-8 py-3 rounded-md font-medium w-full" disabled={loading}>
               {loading ? 'Ingresando...' : 'Ingresar'}
             </Button>
           </DialogFooter>
@@ -114,3 +115,5 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
     </Dialog>
   );
 }
+
+    
