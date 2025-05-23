@@ -1,0 +1,116 @@
+"use client";
+import { useState, type FormEvent } from 'react';
+import { signInWithEmailAndPassword, type Auth } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
+import { X } from 'lucide-react';
+
+interface LoginModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onLoginSuccess: () => void;
+}
+
+export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    if (!email || !password) {
+      setError("Por favor, ingrese correo y contraseña.");
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      await signInWithEmailAndPassword(auth as Auth, email, password);
+      toast({ title: 'Inicio de sesión exitoso', description: 'Bienvenido a CustomsEX-p.' });
+      onLoginSuccess();
+      onClose();
+    } catch (err: any) {
+      console.error("Firebase Auth Error:", err);
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError('Correo o contraseña incorrectos.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('El formato del correo electrónico no es válido.');
+      } else {
+        setError('Error al iniciar sesión. Inténtelo de nuevo.');
+      }
+      toast({ title: 'Error de inicio de sesión', description: error || 'Ocurrió un error.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md glass-effect text-white border-gray-700">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold text-white">CustomsEX-p</DialogTitle>
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+            aria-label="Cerrar"
+          >
+            <X className="h-6 w-6 text-white" />
+          </button>
+        </DialogHeader>
+        <DialogDescription className="text-blue-200">
+          Ingrese sus credenciales para acceder al sistema.
+        </DialogDescription>
+        <form onSubmit={handleSubmit} className="space-y-6 py-4">
+          <div>
+            <Label htmlFor="email-login" className="block text-sm font-medium text-white mb-1">Correo Electrónico</Label>
+            <Input
+              id="email-login"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-4 py-3 border-gray-500 bg-white/20 text-white placeholder-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="usuario@ejemplo.com"
+            />
+          </div>
+          <div>
+            <Label htmlFor="password-login" className="block text-sm font-medium text-white mb-1">Contraseña</Label>
+            <Input
+              id="password-login"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full px-4 py-3 border-gray-500 bg-white/20 text-white placeholder-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="********"
+            />
+          </div>
+           {error && <p className="text-sm text-red-400">{error}</p>}
+          <div className="text-xs text-blue-300">
+            Para solicitar acceso, contacte a Coordinación ACONIC: <br />
+            <Link href="https://wa.me/+50583956505" target="_blank" className="text-blue-400 underline">
+              WhatsApp (+505 8395 6505)
+            </Link>
+          </div>
+          <DialogFooter>
+            <Button type="submit" className="btn-primary text-white px-8 py-3 rounded-md font-medium w-full" disabled={loading}>
+              {loading ? 'Ingresando...' : 'Ingresar'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
