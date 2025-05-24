@@ -7,7 +7,7 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col grid-bg text-primary-foreground">
       <AppHeader />
       <main className="flex-grow container mx-auto px-4 py-6 max-w-7xl">
         {children}
