@@ -1,3 +1,4 @@
+
 "use client";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,17 +9,39 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAppContext, ExamStep } from '@/context/AppContext';
 import type { InitialInfoFormData} from './FormParts/zodSchemas';
 import { initialInfoSchema } from './FormParts/zodSchemas';
+import { useAuth } from '@/context/AuthContext'; // Import useAuth
+
+// Helper function to extract and format name from email
+function extractNameFromEmail(email?: string | null): string {
+  if (!email) return "";
+  try {
+    const localPart = email.substring(0, email.lastIndexOf('@'));
+    const nameParts = localPart.split(/[._-]/); // Split by dot, underscore, or hyphen
+    const formattedName = nameParts
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(' ');
+    return formattedName;
+  } catch (error) {
+    console.error("Error extracting name from email:", error);
+    return ""; // Return empty string or a default name if extraction fails
+  }
+}
 
 export function InitialInfoForm() {
   const { setExamData, setCurrentStep, examData: existingExamData } = useAppContext();
-  
+  const { user } = useAuth(); // Get user from AuthContext
+
+  const defaultManagerName = 
+    existingExamData?.manager || 
+    (user?.email ? extractNameFromEmail(user.email) : '');
+
   const form = useForm<InitialInfoFormData>({
     resolver: zodResolver(initialInfoSchema),
-    defaultValues: existingExamData || {
-      ne: '',
-      reference: '',
-      manager: '',
-      location: '',
+    defaultValues: {
+      ne: existingExamData?.ne || '',
+      reference: existingExamData?.reference || '',
+      manager: defaultManagerName,
+      location: existingExamData?.location || '',
     },
   });
 
