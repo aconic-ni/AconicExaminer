@@ -1,3 +1,4 @@
+
 "use client";
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -40,10 +41,10 @@ export function SuccessModal() {
         </DialogDescription>
         <div className="mt-6 flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3 sm:justify-center">
           <Button onClick={() => resetApp()} className="btn-primary w-full sm:w-auto">
-            <FilePlus className="mr-2 h-4 w-4" /> Empezar Nuevo Examen
+            <FilePlus className="mr-2 h-4 w-4" /> Empezar Nuevo
           </Button>
           <Button onClick={() => setCurrentStep(ExamStep.PREVIEW)} variant="outline" className="w-full sm:w-auto">
-             <RotateCcw className="mr-2 h-4 w-4" /> Revisar Examen Actual
+             <RotateCcw className="mr-2 h-4 w-4" /> Revisar Examen
           </Button>
         </div>
       </DialogContent>
