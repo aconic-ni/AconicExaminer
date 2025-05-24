@@ -1,3 +1,4 @@
+
 "use client";
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -41,11 +42,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center grid-bg text-white p-4">
-      <header className="absolute top-8 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold">CustomsEX-p</h1>
-        <p className="text-blue-200 mt-1 text-sm md:text-base">Sistema de EXAMENES PREVIOS</p>
-      </header>
-      
       <main className="flex flex-col items-center">
         <div
           id="appLogo"
@@ -58,6 +54,10 @@ export default function HomePage() {
         >
           <FileText className="h-32 w-32 text-white" strokeWidth={1.5} />
         </div>
+        <header className="text-center mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold">CustomsEX-p</h1>
+          <p className="text-blue-200 mt-1 text-sm md:text-base">Sistema de EXAMENES PREVIOS</p>
+        </header>
         <Button 
           onClick={() => setIsLoginModalOpen(true)} 
           className="btn-primary text-lg px-8 py-4"
