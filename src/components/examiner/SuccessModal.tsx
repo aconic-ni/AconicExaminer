@@ -21,14 +21,14 @@ export function SuccessModal() {
           <DialogTitle className="text-xl font-semibold text-gray-800">¡Operación Exitosa!</DialogTitle>
         </DialogHeader>
         <DialogDescription className="text-center text-gray-600 space-y-3">
-          <p>El examen previo ha sido registrado correctamente.</p>
-          <p>
+          <div>El examen previo ha sido registrado correctamente.</div>
+          <div>
             Se notificó a: <br />
             <span className="font-medium">gerencia@aconic.com</span>,<br />
             <span className="font-medium">asuntos.juridicos@aconic.com</span>,<br />
             <span className="font-medium">coordinacion@aconic.com</span>.
-          </p>
-          {examData?.manager && <p>Gracias por tu desempeño, {examData.manager}.</p>}
+          </div>
+          {examData?.manager && <div>Gracias por tu desempeño, {examData.manager}.</div>}
           <div>
             <Link
               href="https://aconisani-my.sharepoint.com/:f:/g/personal/asuntos_juridicos_aconic_com_ni/Emrpj4Ss8bhDifpuYc8U_bwBj9r29FGcXxzfxu4PSh2tEQ?e=FhIPTt"

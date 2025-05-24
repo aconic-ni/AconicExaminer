@@ -14,31 +14,31 @@ import type { ProductFormData } from './FormParts/zodSchemas';
 import { productSchema } from './FormParts/zodSchemas';
 import type { Product } from '@/types';
 import { CustomCheckbox } from './FormParts/CustomCheckbox';
-import { 
-  X, 
-  Hash, 
-  Weight, 
-  FileText, 
-  Tag, 
-  Puzzle, 
-  Ruler, 
-  Fingerprint, 
-  Globe, 
-  Barcode, 
-  Package, 
-  Box, 
-  ShieldCheck, 
-  MessageSquare 
+import {
+  X,
+  Hash,
+  Weight,
+  FileText,
+  Tag,
+  Puzzle,
+  Ruler,
+  Fingerprint,
+  Globe,
+  Barcode,
+  Package,
+  Box,
+  ShieldCheck,
+  MessageSquare
 } from 'lucide-react';
 
 
 export function AddProductModal() {
-  const { 
-    isAddProductModalOpen, 
-    closeAddProductModal, 
-    addProduct, 
-    updateProduct, 
-    editingProduct 
+  const {
+    isAddProductModalOpen,
+    closeAddProductModal,
+    addProduct,
+    updateProduct,
+    editingProduct
   } = useAppContext();
 
   const form = useForm<ProductFormData>({
@@ -151,87 +151,87 @@ export function AddProductModal() {
               <FormField control={form.control} name="itemNumber" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-primary" />Número de Item</FormLabel>
-                  <FormControl><Input {...field} /></FormControl><FormMessage />
+                  <FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage />
                 </FormItem>
               )}/>
               <FormField control={form.control} name="weight" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center"><Weight className="mr-2 h-4 w-4 text-primary" />Peso</FormLabel>
-                  <FormControl><Input {...field} /></FormControl><FormMessage />
+                  <FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage />
                 </FormItem>
               )}/>
               <div className="md:col-span-2">
                 <FormField control={form.control} name="description" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Descripción</FormLabel>
-                    <FormControl><Textarea rows={2} {...field} /></FormControl><FormMessage />
+                    <FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl><FormMessage />
                   </FormItem>
                 )}/>
               </div>
               <FormField control={form.control} name="brand" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center"><Tag className="mr-2 h-4 w-4 text-primary" />Marca</FormLabel>
-                  <FormControl><Input {...field} /></FormControl><FormMessage />
+                  <FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage />
                 </FormItem>
               )}/>
               <FormField control={form.control} name="model" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center"><Puzzle className="mr-2 h-4 w-4 text-primary" />Modelo</FormLabel>
-                  <FormControl><Input {...field} /></FormControl><FormMessage />
+                  <FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage />
                 </FormItem>
               )}/>
               <FormField control={form.control} name="unitMeasure" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center"><Ruler className="mr-2 h-4 w-4 text-primary" />Unidad de Medida</FormLabel>
-                  <FormControl><Input {...field} /></FormControl><FormMessage />
+                  <FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage />
                 </FormItem>
               )}/>
               <FormField control={form.control} name="serial" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center"><Fingerprint className="mr-2 h-4 w-4 text-primary" />Serie</FormLabel>
-                  <FormControl><Input {...field} /></FormControl><FormMessage />
+                  <FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage />
                 </FormItem>
               )}/>
               <FormField control={form.control} name="origin" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center"><Globe className="mr-2 h-4 w-4 text-primary" />Origen</FormLabel>
-                  <FormControl><Input {...field} /></FormControl><FormMessage />
+                  <FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage />
                 </FormItem>
               )}/>
               <FormField control={form.control} name="numberPackages" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center"><Barcode className="mr-2 h-4 w-4 text-primary" />Numeración de Bultos</FormLabel>
-                  <FormControl><Input {...field} /></FormControl><FormMessage />
+                  <FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage />
                 </FormItem>
               )}/>
               <FormField control={form.control} name="quantityPackages" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-primary" />Cantidad de Bultos</FormLabel>
-                  <FormControl><Input type="number" min="0" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl><FormMessage />
+                  <FormControl><Input type="number" min="0" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} /></FormControl><FormMessage />
                 </FormItem>
               )}/>
               <FormField control={form.control} name="quantityUnits" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center"><Box className="mr-2 h-4 w-4 text-primary" />Cantidad de Unidades</FormLabel>
-                  <FormControl><Input type="number" min="0" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)}/></FormControl><FormMessage />
+                  <FormControl><Input type="number" min="0" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''}/></FormControl><FormMessage />
                 </FormItem>
               )}/>
               <FormField control={form.control} name="packagingCondition" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center"><ShieldCheck className="mr-2 h-4 w-4 text-primary" />Estado de Mercancía (Nueva, Usada, Otros)</FormLabel>
-                  <FormControl><Input {...field} /></FormControl><FormMessage />
+                  <FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage />
                 </FormItem>
               )}/>
               <div className="md:col-span-2">
                 <FormField control={form.control} name="observation" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-primary" />Observación</FormLabel>
-                    <FormControl><Textarea rows={2} {...field} /></FormControl><FormMessage />
+                    <FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl><FormMessage />
                   </FormItem>
                 )}/>
               </div>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row flex-wrap gap-x-6 gap-y-3 mt-4">
               <Controller control={form.control} name="isConform" render={({ field }) => (
                 <CustomCheckbox label="Conforme a factura" checked={field.value} onChange={field.onChange} name={field.name} />
@@ -259,4 +259,3 @@ export function AddProductModal() {
     </Dialog>
   );
 }
-

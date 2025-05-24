@@ -31,8 +31,8 @@ export function InitialInfoForm() {
   const { setExamData, setCurrentStep, examData: existingExamData } = useAppContext();
   const { user } = useAuth(); // Get user from AuthContext
 
-  const defaultManagerName = 
-    existingExamData?.manager || 
+  const defaultManagerName =
+    existingExamData?.manager ||
     (user?.email ? extractNameFromEmail(user.email) : '');
 
   const form = useForm<InitialInfoFormData>({
@@ -66,7 +66,7 @@ export function InitialInfoForm() {
                   <FormItem>
                     <FormLabel>NE (Seguimiento NX1) *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej: NX1-12345" {...field} />
+                      <Input placeholder="Ej: NX1-12345" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -79,7 +79,7 @@ export function InitialInfoForm() {
                   <FormItem>
                     <FormLabel>Referencia (Contenedor, Guía, BL, Factura...)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej: MSKU1234567" {...field} />
+                      <Input placeholder="Ej: MSKU1234567" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -92,7 +92,7 @@ export function InitialInfoForm() {
                   <FormItem>
                     <FormLabel>Nombre del Gestor *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nombre completo del gestor" {...field} />
+                      <Input placeholder="Nombre completo del gestor" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -105,7 +105,7 @@ export function InitialInfoForm() {
                   <FormItem>
                     <FormLabel>Ubicación de la Mercancía *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej: Almacén Central, Bodega 5" {...field} />
+                      <Input placeholder="Ej: Almacén Central, Bodega 5" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
