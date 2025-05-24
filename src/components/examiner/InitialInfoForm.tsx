@@ -40,13 +40,16 @@ export function InitialInfoForm() {
     defaultValues: {
       ne: existingExamData?.ne || '',
       reference: existingExamData?.reference || '',
-      manager: defaultManagerName,
+      manager: defaultManagerName || '',
       location: existingExamData?.location || '',
     },
   });
 
   function onSubmit(data: InitialInfoFormData) {
-    setExamData(data);
+    setExamData({
+      ...data,
+      reference: data.reference || '', // Ensure reference is always a string
+    });
     setCurrentStep(ExamStep.PRODUCT_LIST);
   }
 
