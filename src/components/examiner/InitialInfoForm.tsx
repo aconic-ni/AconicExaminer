@@ -46,14 +46,11 @@ export function InitialInfoForm() {
   });
 
 function onSubmit(data: InitialInfoFormData) {
-  // Ensure reference is always a string
-  const updatedData = {
-    ...data,
-    reference: data.reference ?? "", // Provide a default value
-  };
-
-  setExamData(updatedData);
-  setCurrentStep(ExamStep.PRODUCT_LIST);
+    setExamData({
+        ...data,
+        reference: data.reference || '', // Ensure reference is always a string
+    });
+    setCurrentStep(ExamStep.PRODUCT_LIST);
 }
 
   return (
