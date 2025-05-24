@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoginModal } from '@/components/auth/LoginModal';
 import { useAuth } from '@/context/AuthContext';
+import { Loader2 } from 'lucide-react'; // Added import for Loader2
 
 export default function LoginPage() {
   const { user, loading } = useAuth();
@@ -28,7 +29,7 @@ export default function LoginPage() {
   if (loading || user) { // Show loader or redirect if user is already logged in or loading
     return (
       <div className="min-h-screen flex items-center justify-center grid-bg">
-        <p className="text-white text-xl">Cargando...</p>
+        <Loader2 className="h-16 w-16 animate-spin text-white" />
       </div>
     );
   }

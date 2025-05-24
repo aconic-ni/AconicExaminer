@@ -2,10 +2,10 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText } from 'lucide-react';
+import { FileText, Loader2 } from 'lucide-react';
 import { LoginModal } from '@/components/auth/LoginModal';
 import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/button'; // Added import for Button
+import { Button } from '@/components/ui/button';
 
 export default function HomePage() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -25,7 +25,7 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center grid-bg">
-        <p className="text-white text-xl">Cargando...</p>
+        <Loader2 className="h-16 w-16 animate-spin text-white" />
       </div>
     );
   }
@@ -35,7 +35,7 @@ export default function HomePage() {
     // but as a fallback or for instantaneous UI update:
     return (
        <div className="min-h-screen flex items-center justify-center grid-bg">
-        <p className="text-white text-xl">Redirigiendo...</p>
+        <Loader2 className="h-16 w-16 animate-spin text-white" />
       </div>
     );
   }
