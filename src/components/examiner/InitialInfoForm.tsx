@@ -46,11 +46,11 @@ export function InitialInfoForm() {
   });
 
 function onSubmit(data: InitialInfoFormData) {
-  const updatedData = {
+  const sanitizedData = {
     ...data,
     reference: data.reference || "", // Ensure reference is always a string
   };
-  setExamData(updatedData);
+  setExamData(sanitizedData);
   setCurrentStep(ExamStep.PRODUCT_LIST);
 }
 
