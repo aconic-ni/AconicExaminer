@@ -65,32 +65,49 @@ export function AddProductModal() {
   });
 
   useEffect(() => {
-    if (editingProduct) {
-      form.reset({
-        ...editingProduct,
-        quantityPackages: editingProduct.quantityPackages !== undefined ? Number(editingProduct.quantityPackages) : undefined,
-        quantityUnits: editingProduct.quantityUnits !== undefined ? Number(editingProduct.quantityUnits) : undefined,
-      });
-    } else {
-      form.reset({
-        itemNumber: '',
-        weight: '',
-        description: '',
-        brand: '',
-        model: '',
-        unitMeasure: '',
-        serial: '',
-        origin: '',
-        numberPackages: '',
-        quantityPackages: undefined,
-        quantityUnits: undefined,
-        packagingCondition: '',
-        observation: '',
-        isConform: false,
-        isExcess: false,
-        isMissing: false,
-        isFault: false,
-      });
+    if (isAddProductModalOpen) { // Reset only when modal becomes open
+      if (editingProduct) {
+        form.reset({
+          id: editingProduct.id,
+          itemNumber: editingProduct.itemNumber ?? '',
+          weight: editingProduct.weight ?? '',
+          description: editingProduct.description ?? '',
+          brand: editingProduct.brand ?? '',
+          model: editingProduct.model ?? '',
+          unitMeasure: editingProduct.unitMeasure ?? '',
+          serial: editingProduct.serial ?? '',
+          origin: editingProduct.origin ?? '',
+          numberPackages: editingProduct.numberPackages ?? '',
+          quantityPackages: editingProduct.quantityPackages !== undefined ? Number(editingProduct.quantityPackages) : undefined,
+          quantityUnits: editingProduct.quantityUnits !== undefined ? Number(editingProduct.quantityUnits) : undefined,
+          packagingCondition: editingProduct.packagingCondition ?? '',
+          observation: editingProduct.observation ?? '',
+          isConform: editingProduct.isConform, // Booleans are non-optional in Product type
+          isExcess: editingProduct.isExcess,
+          isMissing: editingProduct.isMissing,
+          isFault: editingProduct.isFault,
+        });
+      } else {
+        form.reset({
+          itemNumber: '',
+          weight: '',
+          description: '',
+          brand: '',
+          model: '',
+          unitMeasure: '',
+          serial: '',
+          origin: '',
+          numberPackages: '',
+          quantityPackages: undefined,
+          quantityUnits: undefined,
+          packagingCondition: '',
+          observation: '',
+          isConform: false,
+          isExcess: false,
+          isMissing: false,
+          isFault: false,
+        });
+      }
     }
   }, [editingProduct, form, isAddProductModalOpen]);
 
