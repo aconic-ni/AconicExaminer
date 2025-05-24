@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   // Resolve params even if not directly used in this component's logic.
   // This can satisfy Next.js internal checks or expectations for dynamic APIs.
-  const resolvedParams = use(params);
+  const resolvedParams = params; // Fixed the use of params
 
   return (
     <html lang="es">
