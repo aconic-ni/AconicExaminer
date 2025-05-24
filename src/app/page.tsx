@@ -42,7 +42,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center grid-bg text-white p-4">
-      <main className="flex flex-col items-center">
+      <main className="flex flex-col items-center text-center"> {/* Added text-center here */}
         <div
           id="appLogo"
           className="logo-pulse mb-8 cursor-pointer"
@@ -68,8 +68,7 @@ export default function HomePage() {
       </main>
 
       <footer className="absolute bottom-8 text-center text-xs text-blue-300">
-        <p>Diseñado por Jordy Stvaer © 2025</p>
-        <p>ACONIC</p>
+        <p>CustomsEX-p © 2025 ACONIC. Diseñado por Jordy Stvaer.</p>
       </footer>
 
       <LoginModal
