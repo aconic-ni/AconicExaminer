@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { X } from 'lucide-react';
+import { X, Mail, Lock } from 'lucide-react';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -75,7 +75,10 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
         </DialogDescription>
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
           <div>
-            <Label htmlFor="email-login" className="block text-sm font-medium text-foreground mb-1">Correo Electrónico</Label>
+            <Label htmlFor="email-login" className="flex items-center text-sm font-medium text-foreground mb-1">
+              <Mail className="mr-2 h-4 w-4 text-primary" />
+              Correo Electrónico
+            </Label>
             <Input
               id="email-login"
               type="email"
@@ -87,7 +90,10 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
             />
           </div>
           <div>
-            <Label htmlFor="password-login" className="block text-sm font-medium text-foreground mb-1">Contraseña</Label>
+            <Label htmlFor="password-login" className="flex items-center text-sm font-medium text-foreground mb-1">
+              <Lock className="mr-2 h-4 w-4 text-primary" />
+              Contraseña
+            </Label>
             <Input
               id="password-login"
               type="password"
@@ -115,5 +121,3 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
     </Dialog>
   );
 }
-
-    
