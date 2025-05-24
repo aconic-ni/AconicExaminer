@@ -12,7 +12,7 @@ export function AppShell({ children }: AppShellProps) {
       <main className="flex-grow container mx-auto px-4 py-6 max-w-7xl">
         {children}
       </main>
-      <footer className="py-4 text-center text-sm text-muted-foreground border-t">
+      <footer className="py-4 text-center text-sm bg-card text-card-foreground border-t">
         CustomsEX-p © {new Date().getFullYear()} ACONIC. Diseñado por Jordy Stvaer.
       </footer>
     </div>
