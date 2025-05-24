@@ -40,19 +40,18 @@ export function InitialInfoForm() {
     defaultValues: {
       ne: existingExamData?.ne || '',
       reference: existingExamData?.reference || '',
-      manager: defaultManagerName,
+      manager: defaultManagerName || '',
       location: existingExamData?.location || '',
     },
   });
 
-function onSubmit(data: InitialInfoFormData) {
-  const sanitizedData = {
-    ...data,
-    reference: data.reference || "", // Ensure reference is always a string
-  };
-  setExamData(sanitizedData);
-  setCurrentStep(ExamStep.PRODUCT_LIST);
-}
+  function onSubmit(data: InitialInfoFormData) {
+    setExamData({
+      ...data,
+      reference: data.reference || '', // Ensure reference is always a string
+    });
+    setCurrentStep(ExamStep.PRODUCT_LIST);
+  }
 
   return (
     <Card className="w-full max-w-3xl mx-auto custom-shadow">
