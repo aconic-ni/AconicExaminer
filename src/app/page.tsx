@@ -54,7 +54,7 @@ export default function HomePage() {
         >
           <FileText className="h-32 w-32 text-white" strokeWidth={1.5} />
         </div>
-        <header className="text-center mb-8">
+        <header className="text-center mb-12"> {/* Increased mb for spacing */}
           <h1 className="text-4xl md:text-5xl font-bold">CustomsEX-p</h1>
           <p className="text-blue-200 mt-1 text-sm md:text-base">Sistema de EXAMENES PREVIOS</p>
         </header>
@@ -67,7 +67,7 @@ export default function HomePage() {
         </Button>
       </main>
 
-      <footer className="absolute bottom-8 text-center text-xs text-blue-300">
+      <footer className="absolute bottom-8 text-center text-sm text-blue-300">
         <p>CustomsEX-p © 2025 ACONIC. Diseñado por Jordy Stvaer.</p>
       </footer>
 
