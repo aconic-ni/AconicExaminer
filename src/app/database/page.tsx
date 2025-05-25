@@ -18,7 +18,7 @@ const FetchedDetailItem: React.FC<{ label: string; value?: string | number | nul
   let displayValue: string;
   if (typeof value === 'boolean') {
     displayValue = value ? 'Sí' : 'No';
-  } else if (value instanceof FirestoreTimestamp) { 
+  } else if (value instanceof FirestoreTimestamp) {
     displayValue = value.toDate().toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' });
   } else {
     displayValue = String(value ?? 'N/A');
@@ -63,7 +63,7 @@ const FetchedExamDetails: React.FC<{ exam: ExamDocument }> = ({ exam }) => {
             <FetchedDetailItem label="Ubicación Mercancía" value={exam.location} />
           </div>
         </div>
-        
+
         <div>
           <h4 className="text-lg font-medium mb-2 text-foreground">Detalles de Guardado</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 bg-secondary/30 p-4 rounded-md shadow-sm text-sm">
@@ -127,7 +127,7 @@ export default function DatabasePage() {
 
   useEffect(() => {
     if (!authLoading && (!user || !user.isStaticUser)) {
-      router.push('/'); 
+      router.push('/');
     }
   }, [user, authLoading, router]);
 
@@ -162,7 +162,7 @@ export default function DatabasePage() {
       setIsLoading(false);
     }
   };
-  
+
   const handleExport = () => {
     if (fetchedExam) {
       downloadExcelFile(fetchedExam);
@@ -171,24 +171,18 @@ export default function DatabasePage() {
     }
   };
 
-  if (authLoading || (!user && !router.asPath.startsWith('/login'))) { // Allow access to login page during authLoading
+  // Show loader if auth is loading, or if user is not available,
+  // or if user is available but is not the static user (useEffect will redirect).
+  if (authLoading || !user || (user && !user.isStaticUser) ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
-  
-  if (!user?.isStaticUser && !authLoading) { // Redirect if not static user and auth is done
-      router.push('/');
-      return ( // Return loading state during redirect
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-      );
-  }
 
-
+  // At this point, authLoading is false, user exists, and user.isStaticUser is true.
+  // Render the page content.
   return (
     <AppShell>
       <div className="py-2 md:py-5">
@@ -231,7 +225,7 @@ export default function DatabasePage() {
             )}
 
             {fetchedExam && !isLoading && <FetchedExamDetails exam={fetchedExam} />}
-            
+
             {!fetchedExam && !isLoading && !error && searchTermNE && (
                  <div className="mt-4 p-4 bg-yellow-500/10 text-yellow-700 border border-yellow-500/30 rounded-md text-center">
                     Inicie una búsqueda para ver resultados o verifique el NE ingresado.
