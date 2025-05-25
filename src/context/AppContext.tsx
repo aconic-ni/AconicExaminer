@@ -1,8 +1,10 @@
+
 "use client";
 import type React from 'react';
-import { createContext, useContext, useState, useCallback } from 'react';
-import type { ExamData, Product } from '@/types';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import type { ExamData, Product, AppUser as AuthAppUser } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from './AuthContext'; // Import useAuth
 
 export enum ExamStep {
   INITIAL_INFO = 1,
@@ -34,13 +36,6 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const initialExamData: ExamData = {
-  ne: '',
-  reference: '',
-  manager: '',
-  location: '',
-};
-
 export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [examData, setExamDataState] = useState<ExamData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -49,6 +44,34 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [isProductDetailModalOpen, setIsProductDetailModalOpen] = useState(false);
   const [productToView, setProductToView] = useState<Product | null>(null);
+
+  const { user: authUser } = useAuth(); // Get the authenticated user from AuthContext
+  const [internalUser, setInternalUser] = useState<AuthAppUser | null>(authUser); // Keep track of the user AppContext knows
+
+  const resetApp = useCallback(() => {
+    setExamDataState(null);
+    setProducts([]);
+    setCurrentStepState(ExamStep.INITIAL_INFO);
+    setEditingProductState(null);
+    setIsAddProductModalOpen(false);
+    setIsProductDetailModalOpen(false);
+    setProductToView(null);
+  }, []);
+
+
+  useEffect(() => {
+    // If the authenticated user from AuthContext changes,
+    // and it's different from the user AppContext currently knows about,
+    // then reset the AppContext state.
+    const authUserChanged = authUser?.uid !== internalUser?.uid || 
+                           (authUser && !internalUser) || 
+                           (!authUser && internalUser);
+
+    if (authUserChanged) {
+      resetApp();
+      setInternalUser(authUser); // Update internalUser to the new authUser
+    }
+  }, [authUser, internalUser, resetApp]);
 
 
   const setExamData = useCallback((data: ExamData) => {
@@ -95,16 +118,6 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
   }, []);
 
   const closeProductDetailModal = useCallback(() => {
-    setIsProductDetailModalOpen(false);
-    setProductToView(null);
-  }, []);
-
-  const resetApp = useCallback(() => {
-    setExamDataState(null);
-    setProducts([]);
-    setCurrentStepState(ExamStep.INITIAL_INFO);
-    setEditingProductState(null);
-    setIsAddProductModalOpen(false);
     setIsProductDetailModalOpen(false);
     setProductToView(null);
   }, []);
