@@ -1,8 +1,9 @@
 
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApp, getApps, type FirebaseApp } from "firebase/app";
-import { getAnalytics, type Analytics } from "firebase/analytics";
 import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { getAnalytics, type Analytics } from "firebase/analytics";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -25,13 +26,12 @@ if (!getApps().length) {
 }
 
 const authInstance: Auth = getAuth(app);
+const firestoreInstance: Firestore = getFirestore(app);
 
 let analytics: Analytics | undefined;
 // Initialize Analytics only on the client side
 if (typeof window !== 'undefined') {
   try {
-    // Check if measurementId is present before initializing analytics,
-    // as it's required for some Firebase projects / newer SDK versions.
     if (firebaseConfig.measurementId) {
       analytics = getAnalytics(app);
     } else {
@@ -39,8 +39,7 @@ if (typeof window !== 'undefined') {
     }
   } catch (error) {
     console.warn("Firebase Analytics could not be initialized.", error);
-    // Analytics might fail if certain conditions aren't met (e.g., blocked by browser extension)
   }
 }
 
-export { app, authInstance as auth, analytics };
+export { app, authInstance as auth, firestoreInstance as db, analytics };

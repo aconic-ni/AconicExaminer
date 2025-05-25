@@ -10,12 +10,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { X, Mail, Lock } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext'; // Import useAuth
+import type { AppUser } from '@/types';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: () => void;
+  onLoginSuccess: (isStaticUser?: boolean) => void; // Modified to indicate static user
 }
+
+// Static credentials
+const STATIC_USER_EMAIL = "ejecutivos@aconic.com.ni";
+const STATIC_USER_PASS = "test123";
 
 export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps) {
   const [email, setEmail] = useState('');
@@ -23,6 +29,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { setStaticUser } = useAuth(); // Get setStaticUser from AuthContext
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -34,11 +41,28 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
       setLoading(false);
       return;
     }
+
+    // Check for static user credentials
+    if (email === STATIC_USER_EMAIL && password === STATIC_USER_PASS) {
+      const staticUser: AppUser = {
+        uid: 'static_user_uid', // Provide a mock UID
+        email: STATIC_USER_EMAIL,
+        displayName: 'Usuario Ejecutivo',
+        isStaticUser: true,
+      };
+      setStaticUser(staticUser); // Set static user in context
+      toast({ title: 'Inicio de sesión de ejecutivo exitoso', description: 'Bienvenido.' });
+      onLoginSuccess(true); // Pass true to indicate static user
+      onClose();
+      setLoading(false);
+      return;
+    }
     
     try {
       await signInWithEmailAndPassword(auth as Auth, email, password);
+      setStaticUser(null); // Ensure no static user is set if Firebase login succeeds
       toast({ title: 'Inicio de sesión exitoso', description: 'Bienvenido a CustomsEX-p.' });
-      onLoginSuccess();
+      onLoginSuccess(false); // Pass false for Firebase user
       onClose();
     } catch (err: any) {
       console.error("Firebase Auth Error:", err);

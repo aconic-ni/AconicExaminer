@@ -14,12 +14,20 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.push('/examiner');
+      if (user.isStaticUser) {
+        router.push('/database');
+      } else {
+        router.push('/examiner');
+      }
     }
   }, [user, loading, router]);
 
-  const handleLoginSuccess = () => {
-    router.push('/examiner');
+  const handleLoginSuccess = (isStaticUser?: boolean) => {
+    if (isStaticUser) {
+      router.push('/database');
+    } else {
+      router.push('/examiner');
+    }
   };
 
   if (loading) {
@@ -31,8 +39,6 @@ export default function HomePage() {
   }
 
   if (user) {
-    // This case should ideally be handled by the useEffect redirect,
-    // but as a fallback or for instantaneous UI update:
     return (
        <div className="min-h-screen flex items-center justify-center grid-bg">
         <Loader2 className="h-16 w-16 animate-spin text-white" />
@@ -42,7 +48,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center grid-bg text-white p-4">
-      <main className="flex flex-col items-center text-center"> {/* Added text-center here */}
+      <main className="flex flex-col items-center text-center">
         <div
           id="appLogo"
           className="logo-pulse mb-8 cursor-pointer"
@@ -54,7 +60,7 @@ export default function HomePage() {
         >
           <FileText className="h-32 w-32 text-white" strokeWidth={1.5} />
         </div>
-        <header className="text-center mb-12"> {/* Increased mb for spacing */}
+        <header className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold">CustomsEX-p</h1>
           <p className="text-blue-200 mt-1 text-sm md:text-base">Sistema de EXAMENES PREVIOS</p>
         </header>
@@ -68,7 +74,7 @@ export default function HomePage() {
       </main>
 
       <footer className="absolute bottom-8 text-center text-sm text-blue-300">
-        <p>CustomsEX-p © 2025 ACONIC. Diseñado por Jordy Stvaer.</p>
+        CustomsEX-p © 2025 ACONIC. Diseñado por Jordy Stvaer.
       </footer>
 
       <LoginModal

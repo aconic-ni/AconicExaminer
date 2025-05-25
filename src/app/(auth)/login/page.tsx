@@ -1,11 +1,10 @@
+
 "use client";
-// This page is optional if login is only modal-based from the homepage.
-// It can serve as a dedicated login route if needed.
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoginModal } from '@/components/auth/LoginModal';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2 } from 'lucide-react'; // Added import for Loader2
+import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const { user, loading } = useAuth();
@@ -13,20 +12,23 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.push('/examiner');
+      if (user.isStaticUser) {
+        router.push('/database');
+      } else {
+        router.push('/examiner');
+      }
     }
   }, [user, loading, router]);
 
-  const handleLoginSuccess = () => {
-    router.push('/examiner');
+  const handleLoginSuccess = (isStaticUser?: boolean) => {
+    if (isStaticUser) {
+      router.push('/database');
+    } else {
+      router.push('/examiner');
+    }
   };
   
-  // Keep modal open by default on this page
-  // The LoginModal itself would need to be adapted if used outside Dialog
-  // For simplicity, assuming the modal approach from '/' is primary.
-  // This page could simply render the modal as non-closable until login or navigation.
-
-  if (loading || user) { // Show loader or redirect if user is already logged in or loading
+  if (loading || user) {
     return (
       <div className="min-h-screen flex items-center justify-center grid-bg">
         <Loader2 className="h-16 w-16 animate-spin text-white" />
@@ -36,8 +38,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center grid-bg">
-       {/* Render LoginModal always open, or a dedicated login form component */}
-       {/* The LoginModal is designed as a Dialog, so it needs a trigger or to be always open */}
        <LoginModal isOpen={true} onClose={() => router.push('/')} onLoginSuccess={handleLoginSuccess} />
     </div>
   );

@@ -1,3 +1,4 @@
+
 "use client";
 import type React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
@@ -10,7 +11,7 @@ interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
   logout: () => Promise<void>;
-  // Login function will be part of LoginModal, this context provides user state
+  setStaticUser: (user: AppUser | null) => void; // To set static user
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,8 +23,13 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
   useEffect(() => {
     if (!isFirebaseInitialized) {
-      // Wait for Firebase to be initialized
       setLoading(true);
+      return;
+    }
+
+    // If a static user is already set (e.g. from LoginModal), don't override with Firebase auth state
+    if (user?.isStaticUser) {
+      setLoading(false);
       return;
     }
 
@@ -33,6 +39,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
+          isStaticUser: false,
         });
       } else {
         setUser(null);
@@ -41,29 +48,29 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     });
 
     return () => unsubscribe();
-  }, [isFirebaseInitialized]);
+  }, [isFirebaseInitialized, user?.isStaticUser]);
 
   const logout = async () => {
     setLoading(true);
     try {
-      await firebaseSignOut(auth as Auth);
-      setUser(null);
+      if (!user?.isStaticUser) { // Only sign out from Firebase if it's a Firebase user
+        await firebaseSignOut(auth as Auth);
+      }
+      setUser(null); // Clear user for both static and Firebase users
     } catch (error) {
       console.error("Error signing out: ", error);
-      // Handle error appropriately, e.g., show a toast notification
     } finally {
       setLoading(false);
     }
   };
+
+  const setStaticUser = (staticUser: AppUser | null) => {
+    setUser(staticUser);
+    setLoading(false); // Assuming static user login is immediate
+  };
   
-  // Show a global loader or skeleton if auth state is still loading
-  if (loading && isFirebaseInitialized) {
-     // Or a more sophisticated loading screen
-  }
-
-
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
+    <AuthContext.Provider value={{ user, loading, logout, setStaticUser }}>
       {children}
     </AuthContext.Provider>
   );

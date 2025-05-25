@@ -1,4 +1,6 @@
 
+import type { Timestamp } from 'firebase/firestore';
+
 export interface ExamData {
   ne: string;
   reference: string;
@@ -32,5 +34,11 @@ export interface AppUser {
   uid: string;
   email: string | null;
   displayName?: string | null;
-  // add other properties as needed
+  isStaticUser?: boolean; // Flag for the static user
+}
+
+export interface ExamDocument extends ExamData {
+  products: Product[];
+  savedAt: Timestamp; // Firestore Timestamp for when it was saved
+  savedBy: string | null; // Email of the user who saved it
 }
