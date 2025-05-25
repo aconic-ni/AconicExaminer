@@ -13,7 +13,7 @@ export function AppShell({ children }: AppShellProps) {
         {children}
       </main>
       <footer className="py-4 text-center text-sm bg-card text-card-foreground border-t">
-        CustomsEX-p © {new Date().getFullYear()} ACONIC. Diseñado por Jordy Stvaer.
+        Stvaer © {new Date().getFullYear()} <em className="italic">for</em> ACONIC.
       </footer>
     </div>
   );
