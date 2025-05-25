@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google'; // Changed from Geist to Inter
 import './globals.css';
@@ -30,7 +31,7 @@ export default function RootLayout({
 
   return (
     <html lang="es">
-      <body className={`${inter.variable} font-sans antialiased`}> {/* Use Inter variable */}
+      <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning={true}> {/* Use Inter variable */}
         <FirebaseAppProvider>
           <AuthProvider>
             <AppProvider>
