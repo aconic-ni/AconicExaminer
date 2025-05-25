@@ -1,3 +1,4 @@
+
 "use client";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,7 +55,7 @@ export function ProductListScreen() {
             </div>
             <div className="mt-3">
                 <Button variant="link" onClick={() => setCurrentStep(ExamStep.INITIAL_INFO)} className="text-primary p-0 h-auto">
-                    <ArrowLeft className="mr-1 h-4 w-4" /> Regresar para modificar datos generales
+                    <ArrowLeft className="mr-1 h-4 w-4" /> Regresar para modificar
                 </Button>
             </div>
         </div>
