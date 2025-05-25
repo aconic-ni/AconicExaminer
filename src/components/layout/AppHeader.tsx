@@ -21,7 +21,7 @@ export function AppHeader() {
             </Link>
             {/* User Info for Mobile View - stays below the app name */}
             {user && !loading && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1 md:hidden">
+              <div className="flex w-full items-center justify-center gap-2 text-sm text-muted-foreground mt-1 md:hidden">
                 <UserCircle className="h-5 w-5" />
                 <span>{user.email}</span>
               </div>
