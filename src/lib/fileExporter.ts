@@ -59,7 +59,8 @@ export function downloadTxtFile(examData: ExamData, products: Product[]) {
 
 export function downloadExcelFile(data: ExportableExamData) {
   const now = new Date();
-  const fechaHoraExportacion = `${now.toLocaleDateString('es-NI', {dateStyle: 'long', timeStyle: 'short'})}`;
+  // Use toLocaleString for date and time
+  const fechaHoraExportacion = `${now.toLocaleString('es-NI', {dateStyle: 'long', timeStyle: 'short'})}`;
   
   const excelDataHeader = [
     ['EXAMEN PREVIO AGENCIA ACONIC - CustomsEX-p'],
@@ -78,6 +79,7 @@ export function downloadExcelFile(data: ExportableExamData) {
     }
     if (data.savedAt) {
       const savedDate = data.savedAt instanceof Date ? data.savedAt : (data.savedAt as Timestamp).toDate();
+      // Use toLocaleString for date and time here as well
       excelDataHeader.push(['Fecha y Hora de Guardado:', savedDate.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' })]);
     }
   }
@@ -135,7 +137,7 @@ export function downloadExcelFile(data: ExportableExamData) {
   }));
   
   if (colWidths.length > 0 && excelDataHeader.some(row => row.length > 0 && row[0])) {
-    colWidths[0].wch = Math.max(colWidths[0].wch || 0, ...excelDataHeader.filter(row => row.length > 0 && row[0]).map(row => String(row[0]).length + 2));
+    colWidths[0].wch = Math.max(colWidths[0]?.wch || 0, ...excelDataHeader.filter(row => row.length > 0 && row[0]).map(row => String(row[0]).length + 2));
   }
   if (colWidths.length > 1 && excelDataHeader.some(row => row.length > 1 && row[1])) {
     colWidths[1].wch = Math.max(colWidths[1]?.wch || 0, ...excelDataHeader.filter(row => row.length > 1 && row[1]).map(row => String(row[1]).length + 5));
