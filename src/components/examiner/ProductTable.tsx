@@ -57,6 +57,7 @@ export function ProductTable() {
       <Table>
         <TableHeader className="bg-gray-50">
           <TableRow>
+            <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Numeración de Bultos</TableHead>
             <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</TableHead>
             <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</TableHead>
             <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marca</TableHead>
@@ -68,6 +69,7 @@ export function ProductTable() {
         <TableBody className="bg-white divide-y divide-gray-200">
           {products.map((product) => (
             <TableRow key={product.id} className={getRowHighlightClass(product)}>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{product.numberPackages || 'N/A'}</TableCell>
               <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{product.itemNumber || 'N/A'}</TableCell>
               <TableCell className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">{product.description || 'N/A'}</TableCell>
               <TableCell className="px-4 py-3 text-sm text-gray-500">{product.brand || 'N/A'}</TableCell>
