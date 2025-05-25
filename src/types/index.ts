@@ -42,3 +42,13 @@ export interface ExamDocument extends ExamData {
   savedAt: Timestamp; // Firestore Timestamp for when it was saved
   savedBy: string | null; // Email of the user who saved it
 }
+
+// Interface for data passed to downloadExcelFile
+// It accommodates both PreviewScreen (without savedAt/savedBy) and DatabasePage (with them)
+export interface ExportableExamData extends ExamData {
+  products?: Product[] | null;
+  savedAt?: Timestamp | Date | null; // Allow null for consistency if field might be absent
+  savedBy?: string | null;
+}
+
+    

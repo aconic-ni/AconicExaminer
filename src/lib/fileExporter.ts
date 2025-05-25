@@ -1,15 +1,15 @@
 
-import type { ExamData, Product, ExamDocument } from '@/types';
+import type { ExamData, Product, ExamDocument, ExportableExamData } from '@/types';
 import type { Timestamp } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 
-// Interface for data passed to downloadExcelFile
+// Interface for data passed to downloadExcelFile -  MOVED to types/index.ts
 // It accommodates both PreviewScreen (without savedAt/savedBy) and DatabasePage (with them)
-interface ExportableExamData extends ExamData {
-  products?: Product[] | null; // Made products optional to align with potential Firestore state
-  savedAt?: Timestamp | Date;
-  savedBy?: string | null;
-}
+// interface ExportableExamData extends ExamData {
+//   products?: Product[] | null;
+//   savedAt?: Timestamp | Date;
+//   savedBy?: string | null;
+// }
 
 
 export function downloadTxtFile(examData: ExamData, products: Product[]) {
@@ -61,8 +61,10 @@ export function downloadExcelFile(data: ExportableExamData) {
   const now = new Date();
   const fechaHoraExportacion = `${now.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'short' })}`;
 
+  const photoLinkUrl = `https://aconisani-my.sharepoint.com/my?id=%2Fpersonal%2Fasuntos%5Fjuridicos%5Faconic%5Fcom%5Fni%2FDocuments%2FExamenes%20Previos%20ACONIC%2F${encodeURIComponent(data.ne)}&ga=1`;
+
   // --- Hoja 1: Detalles del Examen y Productos ---
-  const examDetailsSheetData = [
+  const examDetailsSheetData: (string | number | Date | null | undefined | XLSX.CellObject)[][] = [
     ['EXAMEN PREVIO AGENCIA ACONIC - CustomsEX-p'],
     [],
     ['INFORMACIÓN GENERAL DEL EXAMEN:'],
@@ -70,6 +72,7 @@ export function downloadExcelFile(data: ExportableExamData) {
     ['Referencia:', data.reference || 'N/A'],
     ['Gestor del Examen:', data.manager],
     ['Ubicación Mercancía:', data.location],
+    ['Fotos:', { v: 'Abrir Carpeta de Fotos', t: 's', l: { Target: photoLinkUrl, Tooltip: 'Ir a la carpeta de fotos en SharePoint' } }],
     [],
     ['PRODUCTOS:']
   ];
@@ -114,15 +117,24 @@ export function downloadExcelFile(data: ExportableExamData) {
   const examColWidths = productHeaders.map((header, i) => ({
     wch: Math.max(
       header.length,
-      ...ws_exam_details_data.map(row => row[i] ? String(row[i]).length : 0)
+      ...(ws_exam_details_data.slice(examDetailsSheetData.length) as string[][]).map(row => row[i] ? String(row[i]).length : 0)
     ) + 2 
   }));
   
-  if (examColWidths.length > 0 && examDetailsSheetData.some(row => row.length > 0 && row[0])) {
-    examColWidths[0].wch = Math.max(examColWidths[0]?.wch || 0, ...examDetailsSheetData.filter(row => row.length > 0 && row[0]).map(row => String(row[0]).length + 2));
+  const generalInfoLabels = examDetailsSheetData.slice(0, examDetailsSheetData.length - 2).map(row => String(row[0] || ''));
+  const generalInfoValues = examDetailsSheetData.slice(0, examDetailsSheetData.length - 2).map(row => {
+    const cellValue = row[1];
+    if (typeof cellValue === 'object' && cellValue !== null && 'v' in cellValue) {
+      return String((cellValue as XLSX.CellObject).v || '');
+    }
+    return String(cellValue || '');
+  });
+
+  if (examColWidths.length > 0) {
+    examColWidths[0].wch = Math.max(examColWidths[0]?.wch || 0, ...generalInfoLabels.map(label => label.length + 2));
   }
-  if (examColWidths.length > 1 && examDetailsSheetData.some(row => row.length > 1 && row[1])) {
-    examColWidths[1].wch = Math.max(examColWidths[1]?.wch || 0, ...examDetailsSheetData.filter(row => row.length > 1 && row[1]).map(row => String(row[1]).length + 5));
+  if (examColWidths.length > 1) {
+    examColWidths[1].wch = Math.max(examColWidths[1]?.wch || 0, ...generalInfoValues.map(value => value.length + 5));
   }
   ws_exam_details['!cols'] = examColWidths;
 
@@ -163,3 +175,5 @@ export function downloadExcelFile(data: ExportableExamData) {
   
   XLSX.writeFile(wb, `CustomsEX-p_${data.ne}_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
+
+    
