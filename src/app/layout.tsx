@@ -25,9 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
   params: { [key: string]: string | string[] | undefined };
 }>) {
-  // Resolve params even if not directly used in this component's logic.
-  // This can satisfy Next.js internal checks or expectations for dynamic APIs.
-  const resolvedParams = use(params);
+  // Directly use or log params if needed instead of using `use`
+  console.log(params);
 
   return (
     <html lang="es">
