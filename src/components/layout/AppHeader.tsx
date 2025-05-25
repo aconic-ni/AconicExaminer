@@ -40,18 +40,17 @@ export function AppHeader() {
                 </div>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon" // Changed from sm to icon
                   onClick={logout}
                   className="text-primary hover:bg-destructive hover:text-destructive-foreground"
                   aria-label="Salir"
                 >
-                  <LogOut className="h-4 w-4" />
+                  <LogOut className="h-5 w-5" /> {/* Adjusted icon size slightly if needed */}
                 </Button>
               </>
             ) : (
                <div className="text-sm text-muted-foreground">No autenticado</div>
             )}
-             <div className="text-sm text-muted-foreground hidden md:block">ACONIC • 2025</div>
           </div>
         </div>
       </div>
