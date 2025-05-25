@@ -6,8 +6,8 @@ import * as XLSX from 'xlsx';
 // Interface for data passed to downloadExcelFile
 // It accommodates both PreviewScreen (without savedAt/savedBy) and DatabasePage (with them)
 interface ExportableExamData extends ExamData {
-  products: Product[];
-  savedAt?: Timestamp | Date; // Date is for flexibility if ever needed, Firestore uses Timestamp
+  products?: Product[] | null; // Made products optional to align with potential Firestore state
+  savedAt?: Timestamp | Date;
   savedBy?: string | null;
 }
 
@@ -22,7 +22,7 @@ export function downloadTxtFile(examData: ExamData, products: Product[]) {
   content += `Ubicación: ${examData.location}\n\n`;
   content += `PRODUCTOS:\n`;
 
-  products.forEach((product, index) => {
+  (Array.isArray(products) ? products : []).forEach((product, index) => {
     content += `\n--- Producto ${index + 1} ---\n`;
     content += `Número de Item: ${product.itemNumber || 'N/A'}\n`;
     content += `Numeración de Bultos: ${product.numberPackages || 'N/A'}\n`;
@@ -71,7 +71,6 @@ export function downloadExcelFile(data: ExportableExamData) {
     ['Ubicación Mercancía:', data.location],
   ];
 
-  // Add savedAt and savedBy if they exist (for exports from DatabasePage)
   if (data.savedAt || data.savedBy) {
     excelDataHeader.push([], ['DETALLES DE GUARDADO EN SISTEMA:']);
     if (data.savedBy) {
@@ -96,7 +95,7 @@ export function downloadExcelFile(data: ExportableExamData) {
     'Peso', 'Unidad de Medida', 'Serie', 'Observación', 'Estado'
   ];
   
-  const productRows = (data.products || []).map(product => { // Ensure data.products is an array
+  const productRows = (Array.isArray(data.products) ? data.products : []).map(product => {
     let statusText = '';
     const statuses = [];
     if (product.isConform) statuses.push("Conforme");
@@ -131,20 +130,21 @@ export function downloadExcelFile(data: ExportableExamData) {
   const colWidths = productHeaders.map((header, i) => ({
     wch: Math.max(
       header.length,
-      ...excelData.map(row => row[i] ? String(row[i]).length : 0)
+      ...excelData.map(row => row[i] ? String(row[i]).length : 0) // Ensure row[i] exists before accessing length
     ) + 2 
   }));
   
-  if (colWidths.length > 0) { // Ensure colWidths is not empty
+  if (colWidths.length > 0 && excelDataHeader.some(row => row.length > 0 && row[0])) {
     colWidths[0].wch = Math.max(colWidths[0].wch || 0, ...excelDataHeader.filter(row => row.length > 0 && row[0]).map(row => String(row[0]).length + 2));
   }
-  if (colWidths.length > 1) { // Ensure colWidths has at least 2 elements
+  if (colWidths.length > 1 && excelDataHeader.some(row => row.length > 1 && row[1])) {
     colWidths[1].wch = Math.max(colWidths[1]?.wch || 0, ...excelDataHeader.filter(row => row.length > 1 && row[1]).map(row => String(row[1]).length + 5));
   }
-
 
   ws['!cols'] = colWidths;
   
   XLSX.utils.book_append_sheet(wb, ws, `Examen ${data.ne}`);
   XLSX.writeFile(wb, `CustomsEX-p_${data.ne}_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
+
+    
