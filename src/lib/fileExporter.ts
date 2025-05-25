@@ -59,10 +59,10 @@ export function downloadTxtFile(examData: ExamData, products: Product[]) {
 
 export function downloadExcelFile(data: ExportableExamData) {
   const now = new Date();
-  // Use toLocaleString for date and time
-  const fechaHoraExportacion = `${now.toLocaleString('es-NI', {dateStyle: 'long', timeStyle: 'short'})}`;
-  
-  const excelDataHeader = [
+  const fechaHoraExportacion = `${now.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'short' })}`;
+
+  // --- Hoja 1: Detalles del Examen y Productos ---
+  const examDetailsSheetData = [
     ['EXAMEN PREVIO AGENCIA ACONIC - CustomsEX-p'],
     [],
     ['INFORMACIÓN GENERAL DEL EXAMEN:'],
@@ -70,26 +70,9 @@ export function downloadExcelFile(data: ExportableExamData) {
     ['Referencia:', data.reference || 'N/A'],
     ['Gestor del Examen:', data.manager],
     ['Ubicación Mercancía:', data.location],
-  ];
-
-  if (data.savedAt || data.savedBy) {
-    excelDataHeader.push([], ['DETALLES DE GUARDADO EN SISTEMA:']);
-    if (data.savedBy) {
-      excelDataHeader.push(['Guardado por (correo):', data.savedBy || 'N/A']);
-    }
-    if (data.savedAt) {
-      const savedDate = data.savedAt instanceof Date ? data.savedAt : (data.savedAt as Timestamp).toDate();
-      // Use toLocaleString for date and time here as well
-      excelDataHeader.push(['Fecha y Hora de Guardado:', savedDate.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' })]);
-    }
-  }
-  
-  excelDataHeader.push(
-    ['Fecha y Hora de Exportación:', fechaHoraExportacion],
     [],
     ['PRODUCTOS:']
-  );
-
+  ];
 
   const productHeaders = [
     'Número de Item', 'Numeración de Bultos', 'Cantidad de Bultos', 'Cantidad de Unidades',
@@ -124,29 +107,59 @@ export function downloadExcelFile(data: ExportableExamData) {
     ];
   });
 
-  const excelData = [...excelDataHeader, productHeaders, ...productRows];
+  const ws_exam_details_data = [...examDetailsSheetData, productHeaders, ...productRows];
+  const ws_exam_details = XLSX.utils.aoa_to_sheet(ws_exam_details_data);
 
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(excelData);
-
-  const colWidths = productHeaders.map((header, i) => ({
+  // Ajustar anchos de columna para la hoja de detalles del examen
+  const examColWidths = productHeaders.map((header, i) => ({
     wch: Math.max(
       header.length,
-      ...excelData.map(row => row[i] ? String(row[i]).length : 0) // Ensure row[i] exists before accessing length
+      ...ws_exam_details_data.map(row => row[i] ? String(row[i]).length : 0)
     ) + 2 
   }));
   
-  if (colWidths.length > 0 && excelDataHeader.some(row => row.length > 0 && row[0])) {
-    colWidths[0].wch = Math.max(colWidths[0]?.wch || 0, ...excelDataHeader.filter(row => row.length > 0 && row[0]).map(row => String(row[0]).length + 2));
+  if (examColWidths.length > 0 && examDetailsSheetData.some(row => row.length > 0 && row[0])) {
+    examColWidths[0].wch = Math.max(examColWidths[0]?.wch || 0, ...examDetailsSheetData.filter(row => row.length > 0 && row[0]).map(row => String(row[0]).length + 2));
   }
-  if (colWidths.length > 1 && excelDataHeader.some(row => row.length > 1 && row[1])) {
-    colWidths[1].wch = Math.max(colWidths[1]?.wch || 0, ...excelDataHeader.filter(row => row.length > 1 && row[1]).map(row => String(row[1]).length + 5));
+  if (examColWidths.length > 1 && examDetailsSheetData.some(row => row.length > 1 && row[1])) {
+    examColWidths[1].wch = Math.max(examColWidths[1]?.wch || 0, ...examDetailsSheetData.filter(row => row.length > 1 && row[1]).map(row => String(row[1]).length + 5));
+  }
+  ws_exam_details['!cols'] = examColWidths;
+
+  // --- Hoja 2: Detalles del Sistema ---
+  const systemDetailsSheetData: (string | number | Date | null | undefined)[][] = [
+    ['DETALLES DE SISTEMA DEL EXAMEN:']
+  ];
+
+  if (data.savedBy) {
+    systemDetailsSheetData.push(['Guardado por (correo):', data.savedBy]);
+  } else {
+    systemDetailsSheetData.push(['Guardado por (correo):', 'N/A (No guardado en BD aún o dato no disponible)']);
   }
 
-  ws['!cols'] = colWidths;
+  if (data.savedAt) {
+    const savedDate = data.savedAt instanceof Date ? data.savedAt : (data.savedAt as Timestamp).toDate();
+    systemDetailsSheetData.push(['Fecha y Hora de Guardado:', savedDate.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' })]);
+  } else {
+     systemDetailsSheetData.push(['Fecha y Hora de Guardado:', 'N/A (No guardado en BD aún o dato no disponible)']);
+  }
   
-  XLSX.utils.book_append_sheet(wb, ws, `Examen ${data.ne}`);
+  systemDetailsSheetData.push(['Fecha y Hora de Exportación:', fechaHoraExportacion]);
+
+  const ws_system_details = XLSX.utils.aoa_to_sheet(systemDetailsSheetData);
+  
+  // Ajustar anchos de columna para la hoja de detalles del sistema
+  const systemColWidths = [
+    { wch: Math.max(...systemDetailsSheetData.map(row => String(row[0]).length)) + 2 },
+    { wch: Math.max(...systemDetailsSheetData.map(row => String(row[1]).length)) + 5 },
+  ];
+  ws_system_details['!cols'] = systemColWidths;
+
+
+  // --- Crear y descargar el libro ---
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws_exam_details, `Examen ${data.ne}`);
+  XLSX.utils.book_append_sheet(wb, ws_system_details, "Detalle de Sistema");
+  
   XLSX.writeFile(wb, `CustomsEX-p_${data.ne}_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
-
-    
