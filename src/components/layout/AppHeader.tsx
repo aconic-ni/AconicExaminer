@@ -38,9 +38,14 @@ export function AppHeader() {
                   <UserCircle className="h-5 w-5" />
                   <span>{user.email}</span>
                 </div>
-                <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Salir
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  className="text-primary hover:bg-destructive hover:text-destructive-foreground"
+                  aria-label="Salir"
+                >
+                  <LogOut className="h-4 w-4" />
                 </Button>
               </>
             ) : (
