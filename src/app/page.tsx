@@ -74,7 +74,7 @@ export default function HomePage() {
       </main>
 
       <footer className="absolute bottom-8 text-center text-sm text-blue-300">
-        CustomsEX-p © 2025 ACONIC. Diseñado por Jordy Stvaer.
+        Stvaer © 2025 <em className="italic">for</em> ACONIC.
       </footer>
 
       <LoginModal
