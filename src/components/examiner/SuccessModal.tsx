@@ -3,13 +3,13 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useAppContext, ExamStep } from '@/context/AppContext';
-import { CheckCircle, FilePlus, RotateCcw, Save } from 'lucide-react'; // Added Save icon
+import { CheckCircle, FilePlus, RotateCcw, Save } from 'lucide-react';
 import Link from 'next/link';
-import { db, app } from '@/lib/firebase'; // Import db (Firestore instance) and app
+import { db } from '@/lib/firebase';
 import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import type { ExamDocument, Product } from '@/types'; // Ensure Product is imported if not already
+import type { ExamDocument } from '@/types';
 
 export function SuccessModal() {
   const { currentStep, setCurrentStep, resetApp, examData, products } = useAppContext();
@@ -36,9 +36,9 @@ export function SuccessModal() {
 
     try {
       const examDocRef = doc(db, "examenesPrevios", examData.ne);
-      const dataToSave: Omit<ExamDocument, 'id'> = { // Omit id if NE is the document ID
+      const dataToSave: Omit<ExamDocument, 'id'> = { 
         ...examData,
-        products: products, // Ensure products are correctly typed
+        products: products, 
         savedAt: Timestamp.fromDate(new Date()),
         savedBy: user.email,
       };
@@ -90,9 +90,15 @@ export function SuccessModal() {
               </div>
            </div>
         </DialogDescription>
-        <div className="mt-6 flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:gap-3 sm:justify-center">
-          <Button onClick={handleSaveToDatabase} variant="outline" className="w-full sm:w-auto">
-            <Save className="mr-2 h-4 w-4" /> Guardar en BD
+        <div className="mt-6 flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:gap-3 sm:justify-center items-center">
+          <Button 
+            onClick={handleSaveToDatabase} 
+            variant="destructive" 
+            size="icon" 
+            className="w-10 h-10 sm:w-auto sm:h-auto"
+            aria-label="Guardar en Base de Datos"
+          >
+            <Save className="h-5 w-5 text-destructive-foreground" />
           </Button>
           <Button onClick={() => resetApp()} className="btn-primary w-full sm:w-auto">
             <FilePlus className="mr-2 h-4 w-4" /> Empezar Nuevo
