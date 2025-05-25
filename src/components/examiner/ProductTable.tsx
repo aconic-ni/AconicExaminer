@@ -1,3 +1,4 @@
+
 "use client";
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,13 +11,38 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 export function ProductTable() {
   const { products, openAddProductModal, deleteProduct, openProductDetailModal } = useAppContext();
 
-  const getStatusBadge = (product: Product) => {
-    if (product.isExcess) return <Badge variant="destructive" className="bg-red-100 text-red-800">Excedente</Badge>;
-    if (product.isConform) return <Badge variant="default" className="bg-green-100 text-green-800">Conforme</Badge>;
-    if (product.isMissing) return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Faltante</Badge>;
-    if (product.isFault) return <Badge variant="outline" className="bg-gray-100 text-gray-800">Avería</Badge>;
-    return <Badge variant="outline">Sin Estado</Badge>;
+  const renderStatusBadges = (product: Product) => {
+    const badges = [];
+    if (product.isConform) badges.push(<Badge key="conform" variant="default" className="bg-green-100 text-green-800 whitespace-nowrap">Conforme</Badge>);
+    if (product.isExcess) badges.push(<Badge key="excess" variant="destructive" className="bg-red-100 text-red-800 whitespace-nowrap">Excedente</Badge>);
+    if (product.isMissing) badges.push(<Badge key="missing" variant="secondary" className="bg-yellow-100 text-yellow-800 whitespace-nowrap">Faltante</Badge>);
+    if (product.isFault) badges.push(<Badge key="fault" variant="outline" className="bg-gray-100 text-gray-800 whitespace-nowrap">Avería</Badge>);
+
+    if (badges.length === 0) {
+      return <Badge variant="outline">Sin Estado</Badge>;
+    }
+    return <div className="flex flex-wrap gap-1">{badges}</div>;
   };
+
+  const getRowHighlightClass = (product: Product): string => {
+    let activeStatusesCount = 0;
+    if (product.isConform) activeStatusesCount++;
+    if (product.isExcess) activeStatusesCount++;
+    if (product.isMissing) activeStatusesCount++;
+    if (product.isFault) activeStatusesCount++;
+
+    if (activeStatusesCount > 1) {
+      return 'hover:bg-muted/50'; // Neutral background if multiple statuses
+    }
+    if (activeStatusesCount === 1) {
+      if (product.isExcess) return 'bg-red-50 hover:bg-red-100';
+      if (product.isConform) return 'bg-green-50 hover:bg-green-100';
+      if (product.isMissing) return 'bg-yellow-50 hover:bg-yellow-100';
+      if (product.isFault) return 'bg-gray-50 hover:bg-gray-100';
+    }
+    return 'hover:bg-muted/50'; // Default if no status or unhandled single status
+  };
+
 
   if (products.length === 0) {
     return (
@@ -35,23 +61,18 @@ export function ProductTable() {
             <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</TableHead>
             <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marca</TableHead>
             <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</TableHead>
-            <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</TableHead>
+            <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Estado</TableHead>
             <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="bg-white divide-y divide-gray-200">
           {products.map((product) => (
-            <TableRow key={product.id} className={
-              product.isExcess ? 'bg-red-50 hover:bg-red-100' : 
-              product.isConform ? 'bg-green-50 hover:bg-green-100' :
-              product.isMissing ? 'bg-yellow-50 hover:bg-yellow-100' :
-              product.isFault ? 'bg-gray-50 hover:bg-gray-100' : 'hover:bg-muted/50'
-            }>
+            <TableRow key={product.id} className={getRowHighlightClass(product)}>
               <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{product.itemNumber || 'N/A'}</TableCell>
               <TableCell className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">{product.description || 'N/A'}</TableCell>
               <TableCell className="px-4 py-3 text-sm text-gray-500">{product.brand || 'N/A'}</TableCell>
               <TableCell className="px-4 py-3 text-sm text-gray-500">{`${product.quantityUnits || 0} unid. / ${product.quantityPackages || 0} bultos`}</TableCell>
-              <TableCell className="px-4 py-3 text-sm text-gray-500">{getStatusBadge(product)}</TableCell>
+              <TableCell className="px-4 py-3 text-sm text-gray-500">{renderStatusBadges(product)}</TableCell>
               <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
