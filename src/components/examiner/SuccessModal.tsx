@@ -36,9 +36,9 @@ export function SuccessModal() {
 
     try {
       const examDocRef = doc(db, "examenesPrevios", examData.ne);
-      const dataToSave: Omit<ExamDocument, 'id'> = { 
+      const dataToSave: Omit<ExamDocument, 'id'> = {
         ...examData,
-        products: products, 
+        products: products,
         savedAt: Timestamp.fromDate(new Date()),
         savedBy: user.email,
       };
@@ -91,11 +91,10 @@ export function SuccessModal() {
            </div>
         </DialogDescription>
         <div className="mt-6 flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:gap-3 sm:justify-center items-center">
-          <Button 
-            onClick={handleSaveToDatabase} 
-            variant="destructive" 
-            size="icon" 
-            className="w-10 h-10 sm:w-auto sm:h-auto"
+          <Button
+            onClick={handleSaveToDatabase}
+            variant="destructive"
+            size="icon"
             aria-label="Guardar en Base de Datos"
           >
             <Save className="h-5 w-5 text-destructive-foreground" />
