@@ -45,6 +45,19 @@ export function PreviewScreen() {
     setCurrentStep(ExamStep.SUCCESS);
   };
 
+  const handleDownloadExcel = () => {
+    if (examData) {
+      // When downloading from preview, we don't have savedAt or savedBy yet
+      downloadExcelFile({ ...examData, products });
+    }
+  };
+  
+  const handleDownloadTxt = () => {
+     if (examData) {
+      downloadTxtFile(examData, products);
+    }
+  }
+
   return (
     <Card className="w-full max-w-5xl mx-auto custom-shadow">
       <CardHeader>
@@ -63,7 +76,7 @@ export function PreviewScreen() {
         </div>
 
         <div>
-          <h4 className="text-lg font-medium mb-3 text-foreground">Productos</h4>
+          <h4 className="text-lg font-medium mb-3 text-foreground">Productos ({products.length})</h4>
           {products.length > 0 ? (
             <div className="space-y-6">
               {products.map((product, index) => (
@@ -108,10 +121,10 @@ export function PreviewScreen() {
                 <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Productos
             </Button>
             <div className="flex flex-col sm:flex-row gap-3">
-                <Button variant="outline" onClick={() => downloadTxtFile(examData, products)} className="hover:bg-accent/50">
+                <Button variant="outline" onClick={handleDownloadTxt} className="hover:bg-accent/50">
                     <Download className="mr-2 h-4 w-4" /> Descargar TXT
                 </Button>
-                <Button variant="outline" onClick={() => downloadExcelFile(examData, products)} className="hover:bg-accent/50">
+                <Button variant="outline" onClick={handleDownloadExcel} className="hover:bg-accent/50">
                     <Download className="mr-2 h-4 w-4" /> Descargar Excel
                 </Button>
                 <Button onClick={handleConfirm} className="btn-primary">

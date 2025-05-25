@@ -1,5 +1,16 @@
-import type { ExamData, Product } from '@/types';
+
+import type { ExamData, Product, ExamDocument } from '@/types';
+import type { Timestamp } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
+
+// Interface for data passed to downloadExcelFile
+// It accommodates both PreviewScreen (without savedAt/savedBy) and DatabasePage (with them)
+interface ExportableExamData extends ExamData {
+  products: Product[];
+  savedAt?: Timestamp | Date; // Date is for flexibility if ever needed, Firestore uses Timestamp
+  savedBy?: string | null;
+}
+
 
 export function downloadTxtFile(examData: ExamData, products: Product[]) {
   let content = `EXAMEN PREVIO AGENCIA ACONIC - CustomsEX-p\n`;
@@ -46,23 +57,38 @@ export function downloadTxtFile(examData: ExamData, products: Product[]) {
   URL.revokeObjectURL(url);
 }
 
-export function downloadExcelFile(examData: ExamData, products: Product[]) {
+export function downloadExcelFile(data: ExportableExamData) {
   const now = new Date();
-  const fechaHora = `${now.toLocaleDateString('es-NI')} ${now.toLocaleTimeString('es-NI')}`;
+  const fechaHoraExportacion = `${now.toLocaleDateString('es-NI', {dateStyle: 'long', timeStyle: 'short'})}`;
   
   const excelDataHeader = [
     ['EXAMEN PREVIO AGENCIA ACONIC - CustomsEX-p'],
     [],
-    ['INFORMACIÓN GENERAL:'],
-    [],
-    [`Fecha y hora de generación: ${fechaHora}`],
-    ['NE:', examData.ne],
-    ['Referencia:', examData.reference || 'N/A'],
-    ['Gestor:', examData.manager],
-    ['Ubicación:', examData.location],
-    [],
-    ['PRODUCTOS:'],
+    ['INFORMACIÓN GENERAL DEL EXAMEN:'],
+    ['NE:', data.ne],
+    ['Referencia:', data.reference || 'N/A'],
+    ['Gestor del Examen:', data.manager],
+    ['Ubicación Mercancía:', data.location],
   ];
+
+  // Add savedAt and savedBy if they exist (for exports from DatabasePage)
+  if (data.savedAt || data.savedBy) {
+    excelDataHeader.push([], ['DETALLES DE GUARDADO EN SISTEMA:']);
+    if (data.savedBy) {
+      excelDataHeader.push(['Guardado por (correo):', data.savedBy || 'N/A']);
+    }
+    if (data.savedAt) {
+      const savedDate = data.savedAt instanceof Date ? data.savedAt : (data.savedAt as Timestamp).toDate();
+      excelDataHeader.push(['Fecha y Hora de Guardado:', savedDate.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' })]);
+    }
+  }
+  
+  excelDataHeader.push(
+    ['Fecha y Hora de Exportación:', fechaHoraExportacion],
+    [],
+    ['PRODUCTOS:']
+  );
+
 
   const productHeaders = [
     'Número de Item', 'Numeración de Bultos', 'Cantidad de Bultos', 'Cantidad de Unidades',
@@ -70,7 +96,7 @@ export function downloadExcelFile(examData: ExamData, products: Product[]) {
     'Peso', 'Unidad de Medida', 'Serie', 'Observación', 'Estado'
   ];
   
-  const productRows = products.map(product => {
+  const productRows = data.products.map(product => {
     let statusText = '';
     const statuses = [];
     if (product.isConform) statuses.push("Conforme");
@@ -102,22 +128,21 @@ export function downloadExcelFile(examData: ExamData, products: Product[]) {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(excelData);
 
-  // Auto-size columns (basic implementation)
-  const colWidths = productHeaders.map((_, i) => ({
+  const colWidths = productHeaders.map((header, i) => ({
     wch: Math.max(
-      ...excelData.map(row => row[i] ? String(row[i]).length : 0),
-      productHeaders[i].length // Ensure header is also considered
-    )
+      header.length, // Header length
+      ...excelData.map(row => row[i] ? String(row[i]).length : 0) // Max data length in this column
+    ) + 2 // Add a little padding
   }));
-  // Add a bit more padding to NE, Ref, Gestor, Ubicacion in header
-  if (excelData[5] && excelData[5][1]) colWidths[1] = { wch: Math.max(colWidths[1]?.wch || 0, String(excelData[5][1]).length + 5) };
-  if (excelData[6] && excelData[6][1]) colWidths[1] = { wch: Math.max(colWidths[1]?.wch || 0, String(excelData[6][1]).length + 5) };
-  if (excelData[7] && excelData[7][1]) colWidths[1] = { wch: Math.max(colWidths[1]?.wch || 0, String(excelData[7][1]).length + 5) };
-  if (excelData[8] && excelData[8][1]) colWidths[1] = { wch: Math.max(colWidths[1]?.wch || 0, String(excelData[8][1]).length + 5) };
+  
+  // Adjust width for the first column if it contains long header info
+  colWidths[0].wch = Math.max(colWidths[0].wch || 0, ...excelDataHeader.filter(row => row.length > 0 && row[0]).map(row => String(row[0]).length + 2));
+   // Adjust width for the second column if it contains long header info (values for NE, Ref etc.)
+  colWidths[1].wch = Math.max(colWidths[1]?.wch || 0, ...excelDataHeader.filter(row => row.length > 1 && row[1]).map(row => String(row[1]).length + 5));
 
 
   ws['!cols'] = colWidths;
   
-  XLSX.utils.book_append_sheet(wb, ws, `Examen ${examData.ne}`);
-  XLSX.writeFile(wb, `CustomsEX-p_${examData.ne}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, `Examen ${data.ne}`);
+  XLSX.writeFile(wb, `CustomsEX-p_${data.ne}_${new Date().toISOString().split('T')[0]}.xlsx`);
 }

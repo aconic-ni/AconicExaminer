@@ -10,14 +10,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Loader2, Search, Download } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, Timestamp as FirestoreTimestamp } from 'firebase/firestore';
-import type { ExamDocument, Product } from '@/types'; // Ensure Product is imported
+import type { ExamDocument, Product } from '@/types';
+import { downloadExcelFile } from '@/lib/fileExporter'; // Import the exporter
 
 // Helper component for displaying product details in the fetched exam
-const FetchedDetailItem: React.FC<{ label: string; value?: string | number | null | boolean }> = ({ label, value }) => {
+const FetchedDetailItem: React.FC<{ label: string; value?: string | number | null | boolean | FirestoreTimestamp }> = ({ label, value }) => {
   let displayValue: string;
   if (typeof value === 'boolean') {
     displayValue = value ? 'Sí' : 'No';
-  } else if (value instanceof FirestoreTimestamp) { // Check if it's a Firestore Timestamp
+  } else if (value instanceof FirestoreTimestamp) { 
     displayValue = value.toDate().toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' });
   } else {
     displayValue = String(value ?? 'N/A');
@@ -49,7 +50,7 @@ const FetchedExamDetails: React.FC<{ exam: ExamDocument }> = ({ exam }) => {
       <CardHeader>
         <CardTitle className="text-xl md:text-2xl font-semibold text-foreground">Detalles del Examen: {exam.ne}</CardTitle>
         <CardDescription className="text-muted-foreground">
-          Guardado por: {exam.savedBy || 'N/A'} el <FetchedDetailItem label="" value={exam.savedAt} />
+          Información del examen recuperada de la base de datos.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -60,6 +61,14 @@ const FetchedExamDetails: React.FC<{ exam: ExamDocument }> = ({ exam }) => {
             <FetchedDetailItem label="Referencia" value={exam.reference} />
             <FetchedDetailItem label="Gestor del Examen" value={exam.manager} />
             <FetchedDetailItem label="Ubicación Mercancía" value={exam.location} />
+          </div>
+        </div>
+        
+        <div>
+          <h4 className="text-lg font-medium mb-2 text-foreground">Detalles de Guardado</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 bg-secondary/30 p-4 rounded-md shadow-sm text-sm">
+             <FetchedDetailItem label="Guardado por (correo)" value={exam.savedBy} />
+             <FetchedDetailItem label="Fecha y Hora de Guardado" value={exam.savedAt} />
           </div>
         </div>
 
@@ -118,7 +127,7 @@ export default function DatabasePage() {
 
   useEffect(() => {
     if (!authLoading && (!user || !user.isStaticUser)) {
-      router.push('/'); // Redirect if not static user or not logged in
+      router.push('/'); 
     }
   }, [user, authLoading, router]);
 
@@ -142,26 +151,43 @@ export default function DatabasePage() {
       } else {
         setError("Archivo erróneo o no ha sido creado por gestor para el NE: " + searchTermNE);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching document from Firestore: ", err);
-      setError("Error al buscar el examen. Intente de nuevo.");
+      let userFriendlyError = "Error al buscar el examen. Intente de nuevo.";
+      if (err.code === 'permission-denied') {
+        userFriendlyError = "No tiene permisos para acceder a esta información.";
+      }
+      setError(userFriendlyError);
     } finally {
       setIsLoading(false);
     }
   };
   
   const handleExport = () => {
-    // Placeholder for export functionality
-    alert("Funcionalidad de Exportar pendiente de implementación.");
+    if (fetchedExam) {
+      downloadExcelFile(fetchedExam);
+    } else {
+      alert("No hay datos de examen para exportar. Realice una búsqueda primero.");
+    }
   };
 
-  if (authLoading || !user || !user.isStaticUser) {
+  if (authLoading || (!user && !router.asPath.startsWith('/login'))) { // Allow access to login page during authLoading
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
+  
+  if (!user?.isStaticUser && !authLoading) { // Redirect if not static user and auth is done
+      router.push('/');
+      return ( // Return loading state during redirect
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      );
+  }
+
 
   return (
     <AppShell>
@@ -186,7 +212,7 @@ export default function DatabasePage() {
               <Button type="submit" className="btn-primary w-full sm:w-auto" disabled={isLoading}>
                 <Search className="mr-2 h-4 w-4" /> {isLoading ? 'Buscando...' : 'Ejecutar Búsqueda'}
               </Button>
-              <Button type="button" onClick={handleExport} variant="outline" className="w-full sm:w-auto">
+              <Button type="button" onClick={handleExport} variant="outline" className="w-full sm:w-auto" disabled={!fetchedExam || isLoading}>
                 <Download className="mr-2 h-4 w-4" /> Exportar
               </Button>
             </form>
@@ -208,7 +234,12 @@ export default function DatabasePage() {
             
             {!fetchedExam && !isLoading && !error && searchTermNE && (
                  <div className="mt-4 p-4 bg-yellow-500/10 text-yellow-700 border border-yellow-500/30 rounded-md text-center">
-                    Inicie una búsqueda para ver resultados.
+                    Inicie una búsqueda para ver resultados o verifique el NE ingresado.
+                 </div>
+            )}
+             {!fetchedExam && !isLoading && !error && !searchTermNE && (
+                 <div className="mt-4 p-4 bg-blue-500/10 text-blue-700 border border-blue-500/30 rounded-md text-center">
+                    Ingrese un NE para buscar un examen previo.
                  </div>
             )}
 
