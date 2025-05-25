@@ -96,7 +96,7 @@ export function downloadExcelFile(data: ExportableExamData) {
     'Peso', 'Unidad de Medida', 'Serie', 'Observación', 'Estado'
   ];
   
-  const productRows = data.products.map(product => {
+  const productRows = (data.products || []).map(product => { // Ensure data.products is an array
     let statusText = '';
     const statuses = [];
     if (product.isConform) statuses.push("Conforme");
@@ -130,15 +130,17 @@ export function downloadExcelFile(data: ExportableExamData) {
 
   const colWidths = productHeaders.map((header, i) => ({
     wch: Math.max(
-      header.length, // Header length
-      ...excelData.map(row => row[i] ? String(row[i]).length : 0) // Max data length in this column
-    ) + 2 // Add a little padding
+      header.length,
+      ...excelData.map(row => row[i] ? String(row[i]).length : 0)
+    ) + 2 
   }));
   
-  // Adjust width for the first column if it contains long header info
-  colWidths[0].wch = Math.max(colWidths[0].wch || 0, ...excelDataHeader.filter(row => row.length > 0 && row[0]).map(row => String(row[0]).length + 2));
-   // Adjust width for the second column if it contains long header info (values for NE, Ref etc.)
-  colWidths[1].wch = Math.max(colWidths[1]?.wch || 0, ...excelDataHeader.filter(row => row.length > 1 && row[1]).map(row => String(row[1]).length + 5));
+  if (colWidths.length > 0) { // Ensure colWidths is not empty
+    colWidths[0].wch = Math.max(colWidths[0].wch || 0, ...excelDataHeader.filter(row => row.length > 0 && row[0]).map(row => String(row[0]).length + 2));
+  }
+  if (colWidths.length > 1) { // Ensure colWidths has at least 2 elements
+    colWidths[1].wch = Math.max(colWidths[1]?.wch || 0, ...excelDataHeader.filter(row => row.length > 1 && row[1]).map(row => String(row[1]).length + 5));
+  }
 
 
   ws['!cols'] = colWidths;
