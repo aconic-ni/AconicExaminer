@@ -45,9 +45,12 @@ export function InitialInfoForm() {
     },
   });
 
-  function onSubmit(data: InitialInfoFormData) {
-    setExamData(data);
-    setCurrentStep(ExamStep.PRODUCT_LIST);
+function onSubmit(data: InitialInfoFormData) {
+  setExamData({
+    ...data,
+    reference: data.reference || "", // Ensure 'reference' is a string
+  });
+  setCurrentStep(ExamStep.PRODUCT_LIST);
 }
 
   return (
