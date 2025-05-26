@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase';
 import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import type { ExamDocument } from '@/types';
+import type { ExamDocument, Product } from '@/types';
 
 export function SuccessModal() {
   const { currentStep, setCurrentStep, resetApp, examData, products } = useAppContext();
@@ -36,22 +36,37 @@ export function SuccessModal() {
 
     try {
       const examDocRef = doc(db, "examenesPrevios", examData.ne);
+
+      // Sanitize products: convert undefined to null
+      const productsForDb = products.map(product => {
+        const newProduct: Partial<Product> = {};
+        (Object.keys(product) as Array<keyof Product>).forEach(key => {
+          if (product[key] === undefined) {
+            newProduct[key] = null as any; // Firestore accepts null
+          } else {
+            newProduct[key] = product[key];
+          }
+        });
+        return newProduct as Product;
+      });
+
       const dataToSave: Omit<ExamDocument, 'id'> = {
-        ...examData,
-        products: products,
+        ...examData, // examData fields are mostly required or defaulted to ''
+        products: productsForDb,
         savedAt: Timestamp.fromDate(new Date()),
-        savedBy: user.email,
+        savedBy: user.email, // user.email can be string | null. Firestore accepts null.
       };
+
       await setDoc(examDocRef, dataToSave);
       toast({
         title: "Examen Guardado",
         description: `El examen NE: ${examData.ne} ha sido guardado en la base de datos.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving document to Firestore: ", error);
       toast({
         title: "Error al Guardar en BD",
-        description: "No se pudo guardar el examen en la base de datos.",
+        description: `No se pudo guardar el examen en la base de datos. ${error.message}`,
         variant: "destructive",
       });
     }
