@@ -37,19 +37,21 @@ const handleSaveToDatabase = async () => {
   try {
     const examDocRef = doc(db, "examenesPrevios", examData.ne);
 
-    // Sanitize products: convert undefined to null
-const productsForDb = products.map((product) => {
-  const newProduct: Partial<Product> = {};
-  (Object.keys(product) as Array<keyof Product>).forEach((key) => {
-    if (product[key] === undefined || product[key] === null) {
-      // Explicitly cast 'null' to the expected type
-      newProduct[key] = null as any; // Ensure 'any' is used to bypass strict type checks
-    } else {
-      newProduct[key] = product[key];
-    }
-  });
-  return newProduct as Product;
-});
+      // Sanitize products: convert undefined to null
+      const productsForDb = products.map((product) => {
+        // Define el tipo para newProduct para reflejar que las propiedades pueden ser null
+        const newProduct: { [K in keyof Product]: Product[K] extends undefined ? null : Product[K] | null } = {} as any; // Usamos as any temporalmente para la construcción
+
+        (Object.keys(product) as Array<keyof Product>).forEach((key) => {
+          if (product[key] === undefined) { // Solo necesitamos verificar undefined aquí, ya que null es aceptado por Firestore
+            newProduct[key] = null; // Firestore accepts null
+        } else {
+            // Asignamos el valor, permitiendo null si ya era null, o el tipo original si no era undefined
+            newProduct[key] = product[key] === null ? null : product[key] as any; // Usamos as any aquí también para simplificar la asignación después de la verificación de undefined
+        }
+        });
+        return newProduct as Product; // Aún puedes castear como Product si tu tipo Product ya maneja null
+      });
 
     const dataToSave: Omit<ExamDocument, 'id'> = {
       ...examData, // examData fields are mostly required or defaulted to ''
