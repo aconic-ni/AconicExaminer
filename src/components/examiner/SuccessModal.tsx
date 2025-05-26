@@ -41,10 +41,10 @@ const handleSaveToDatabase = async () => {
     const productsForDb = products.map((product) => {
       const newProduct: Partial<Product> = {};
       (Object.keys(product) as Array<keyof Product>).forEach((key) => {
-        if (product[key] === undefined) {
-          newProduct[key] = null as any; // Firestore accepts null
+        if (product[key] === undefined || product[key] === null) {
+          newProduct[key] = null; // Firestore accepts null
         } else {
-          newProduct[key] = product[key] as Product[keyof Product]; // Ensure proper type
+          newProduct[key] = product[key] as Exclude<Product[keyof Product], undefined>; // Exclude 'undefined' from the type
         }
       });
       return newProduct as Product; // Cast as Product
