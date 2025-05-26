@@ -29,10 +29,10 @@ export default function ExaminerPage() {
       event.returnValue = '';
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
+    //window.addEventListener('beforeunload', handleBeforeUnload);
+    //return () => {
+      //window.removeEventListener('beforeunload', handleBeforeUnload);
+    //};
   }, []);
 
 
