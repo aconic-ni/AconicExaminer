@@ -38,17 +38,18 @@ const handleSaveToDatabase = async () => {
     const examDocRef = doc(db, "examenesPrevios", examData.ne);
 
     // Sanitize products: convert undefined to null
-    const productsForDb = products.map((product) => {
-      const newProduct: Partial<Product> = {};
-      (Object.keys(product) as Array<keyof Product>).forEach((key) => {
-        if (product[key] === undefined || product[key] === null) {
-          newProduct[key] = null; // Firestore accepts null
-        } else {
-          newProduct[key] = product[key] as Exclude<Product[keyof Product], undefined>; // Exclude 'undefined' from the type
-        }
-      });
-      return newProduct as Product; // Cast as Product
-    });
+const productsForDb = products.map((product) => {
+  const newProduct: Partial<Product> = {};
+  (Object.keys(product) as Array<keyof Product>).forEach((key) => {
+    if (product[key] === undefined || product[key] === null) {
+      // Explicitly cast 'null' to the expected type
+      newProduct[key] = null as any; // Ensure 'any' is used to bypass strict type checks
+    } else {
+      newProduct[key] = product[key];
+    }
+  });
+  return newProduct as Product;
+});
 
     const dataToSave: Omit<ExamDocument, 'id'> = {
       ...examData, // examData fields are mostly required or defaulted to ''
