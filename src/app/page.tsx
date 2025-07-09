@@ -22,12 +22,10 @@ export default function HomePage() {
     }
   }, [user, loading, router]);
 
-  const handleLoginSuccess = (isStaticUser?: boolean) => {
-    if (isStaticUser) {
-      router.push('/database');
-    } else {
-      router.push('/examiner');
-    }
+  const handleLoginSuccess = () => {
+    // The redirection is now handled by the useEffect above, which waits for the auth state to update.
+    // This function just needs to close the modal.
+    setIsLoginModalOpen(false);
   };
 
   if (loading) {
@@ -74,7 +72,7 @@ export default function HomePage() {
       </main>
 
       <footer className="absolute bottom-8 text-center text-sm text-blue-300">
-        Stvaer © 2025 <em className="italic">for</em> ACONIC.
+        CustomsEX-p © 2025 ACONIC. Diseñado por Jordy Stvaer.
       </footer>
 
       <LoginModal
