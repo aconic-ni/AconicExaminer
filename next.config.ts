@@ -2,7 +2,6 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   output: 'export',
-
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -20,7 +19,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // The basePath and assetPrefix are automatically configured
+  // by the GitHub Pages deployment workflow.
 };
 
 export default nextConfig;
-
