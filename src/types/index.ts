@@ -3,7 +3,7 @@ import type { Timestamp } from 'firebase/firestore';
 
 export interface ExamData {
   ne: string;
-  reference: string;
+  reference?: string;
   manager: string;
   location: string;
   consignee: string;
