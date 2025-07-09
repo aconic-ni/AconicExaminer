@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -147,6 +148,37 @@ body {
   .logo-pulse {
     animation: pulse 2s infinite;
     cursor: pointer;
+  }
+
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    #printable-area, #printable-area * {
+      visibility: visible;
+    }
+    #printable-area {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      margin: 0;
+      padding: 1cm;
+      border: none !important;
+      box-shadow: none !important;
+      font-size: 10pt;
+    }
+    .no-print {
+      display: none !important;
+    }
+    .print\:block {
+        display: block !important;
+    }
+    .print-product-container {
+      break-inside: auto; /* Allow breaking inside the container */
+      -webkit-box-decoration-break: clone; /* For Safari/Chrome */
+      box-decoration-break: clone; /* Standard property */
+    }
   }
 }
 
