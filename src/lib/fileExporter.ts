@@ -3,21 +3,13 @@ import type { ExamData, Product, ExamDocument, ExportableExamData } from '@/type
 import type { Timestamp } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 
-// Interface for data passed to downloadExcelFile -  MOVED to types/index.ts
-// It accommodates both PreviewScreen (without savedAt/savedBy) and DatabasePage (with them)
-// interface ExportableExamData extends ExamData {
-//   products?: Product[] | null;
-//   savedAt?: Timestamp | Date;
-//   savedBy?: string | null;
-// }
-
-
 export function downloadTxtFile(examData: ExamData, products: Product[]) {
   let content = `EXAMEN PREVIO AGENCIA ACONIC - CustomsEX-p\n`;
   content += `===========================================\n\n`;
   content += `INFORMACIÓN GENERAL:\n`;
   content += `NE: ${examData.ne}\n`;
   content += `Referencia: ${examData.reference || 'N/A'}\n`;
+  content += `Consignatario: ${examData.consignee}\n`;
   content += `Gestor: ${examData.manager}\n`;
   content += `Ubicación: ${examData.location}\n\n`;
   content += `PRODUCTOS:\n`;
@@ -70,6 +62,7 @@ export function downloadExcelFile(data: ExportableExamData) {
     ['INFORMACIÓN GENERAL DEL EXAMEN:'],
     ['NE:', data.ne],
     ['Referencia:', data.reference || 'N/A'],
+    ['Consignatario:', data.consignee],
     ['Gestor del Examen:', data.manager],
     ['Ubicación Mercancía:', data.location],
     ['Fotos:', { v: 'Abrir Carpeta de Fotos', t: 's', l: { Target: photoLinkUrl, Tooltip: 'Ir a la carpeta de fotos en SharePoint' } }],
@@ -175,5 +168,3 @@ export function downloadExcelFile(data: ExportableExamData) {
   
   XLSX.writeFile(wb, `CustomsEX-p_${data.ne}_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
-
-    
