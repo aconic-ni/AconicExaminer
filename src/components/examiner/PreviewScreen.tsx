@@ -70,6 +70,7 @@ export function PreviewScreen() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 bg-secondary/30 p-4 rounded-md shadow-sm text-sm">
             <div><span className="font-semibold text-foreground/80">NE:</span> {examData.ne}</div>
             <div><span className="font-semibold text-foreground/80">Referencia:</span> {examData.reference || 'N/A'}</div>
+            <div><span className="font-semibold text-foreground/80">Consignatario:</span> {examData.consignee}</div>
             <div><span className="font-semibold text-foreground/80">Gestor:</span> {examData.manager}</div>
             <div><span className="font-semibold text-foreground/80">Ubicación:</span> {examData.location}</div>
           </div>
