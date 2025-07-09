@@ -2,7 +2,7 @@
 "use client";
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
-import { FileText, LogOut, UserCircle } from 'lucide-react';
+import { FileText, LogOut, UserCircle, Camera } from 'lucide-react';
 import Link from 'next/link';
 
 export function AppHeader() {
@@ -46,6 +46,16 @@ export function AppHeader() {
                   <UserCircle className="h-5 w-5" />
                   <span>{user.email}</span>
                 </div>
+                <Button asChild variant="ghost" size="icon" className="text-primary hover:bg-chart-2 hover:text-primary-foreground transition-all duration-300">
+                  <a
+                    href="https://aconisani-my.sharepoint.com/personal/asuntos_juridicos_aconic_com_ni/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fasuntos%5Fjuridicos%5Faconic%5Fcom%5Fni%2FDocuments%2FExamenes%20Previos%20ACONIC&ga=1"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Abrir carpeta de fotos en SharePoint"
+                  >
+                    <Camera className="h-5 w-5" />
+                  </a>
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
