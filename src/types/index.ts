@@ -3,7 +3,7 @@ import type { Timestamp } from 'firebase/firestore';
 
 export interface ExamData {
   ne: string;
-  reference?: string;
+  reference?: string | null;
   manager: string;
   location: string;
   consignee: string;
@@ -11,19 +11,19 @@ export interface ExamData {
 
 export interface Product {
   id: string; // unique id for React keys and updates
-  itemNumber?: string;
-  weight?: string;
-  description?: string;
-  brand?: string;
-  model?: string;
-  unitMeasure?: string;
-  serial?: string;
-  origin?: string;
-  numberPackages?: string;
-  quantityPackages?: number | string; // Allow string for input flexibility, parse to number
-  quantityUnits?: number | string; // Allow string for input flexibility, parse to number
-  packagingCondition?: string;
-  observation?: string;
+  itemNumber?: string | null;
+  weight?: string | null;
+  description?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  unitMeasure?: string | null;
+  serial?: string | null;
+  origin?: string | null;
+  numberPackages?: string | null;
+  quantityPackages?: number | string | null;
+  quantityUnits?: number | string | null;
+  packagingCondition?: string | null;
+  observation?: string | null;
   isConform: boolean;
   isExcess: boolean;
   isMissing: boolean;
