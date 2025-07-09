@@ -2,12 +2,13 @@
 "use client";
 import { useState, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, Search, Download } from 'lucide-react';
+import { Loader2, Search, Download, Printer, X } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, Timestamp as FirestoreTimestamp } from 'firebase/firestore';
 import type { ExamDocument, Product } from '@/types';
@@ -44,45 +45,50 @@ const getProductStatusText = (product: Product): string => {
 
 
 // Component to display the fetched exam
-const FetchedExamDetails: React.FC<{ exam: ExamDocument }> = ({ exam }) => {
+const FetchedExamDetails: React.FC<{ exam: ExamDocument; onClose: () => void }> = ({ exam, onClose }) => {
   return (
-    <Card className="mt-6 w-full custom-shadow">
+    <Card className="mt-6 w-full custom-shadow" id="printable-area">
       <CardHeader>
-        <CardTitle className="text-xl md:text-2xl font-semibold text-foreground">Detalles del Examen: {exam.ne}</CardTitle>
+        <Image
+            src="/HEADERSEXA.svg"
+            alt="Examen Header"
+            width={800}
+            height={100}
+            className="w-full h-auto mb-4"
+            priority
+        />
+        <div className="relative">
+            <CardTitle className="text-xl md:text-2xl font-semibold text-foreground">Detalles del Examen: {exam.ne}</CardTitle>
+            <button onClick={onClose} className="absolute -top-2 -right-2 p-1 text-destructive hover:text-destructive/80 no-print">
+                <X className="h-6 w-6" />
+            </button>
+        </div>
         <CardDescription className="text-muted-foreground">
           Información del examen recuperada de la base de datos.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div>
-          <h4 className="text-lg font-medium mb-2 text-foreground">Información General del Examen</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 bg-secondary/30 p-4 rounded-md shadow-sm text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 bg-secondary/30 p-4 rounded-md shadow-sm text-sm print:grid-cols-2 print:gap-x-8 print:gap-y-3">
             <FetchedDetailItem label="NE (Tracking NX1)" value={exam.ne} />
             <FetchedDetailItem label="Referencia" value={exam.reference} />
+            <FetchedDetailItem label="Consignatario" value={exam.consignee} />
             <FetchedDetailItem label="Gestor del Examen" value={exam.manager} />
             <FetchedDetailItem label="Ubicación Mercancía" value={exam.location} />
-          </div>
-        </div>
-
-        <div>
-          <h4 className="text-lg font-medium mb-2 text-foreground">Detalles de Guardado</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 bg-secondary/30 p-4 rounded-md shadow-sm text-sm">
-             <FetchedDetailItem label="Guardado por (correo)" value={exam.savedBy} />
-             <FetchedDetailItem label="Fecha y Hora de Guardado" value={exam.savedAt} />
-          </div>
+            <FetchedDetailItem label="Guardado por (correo)" value={exam.savedBy} />
+            <FetchedDetailItem label="Fecha y Hora de Guardado" value={exam.savedAt} />
         </div>
 
         <div>
           <h4 className="text-lg font-medium mb-3 text-foreground">Productos ({exam.products?.length || 0})</h4>
           {exam.products && exam.products.length > 0 ? (
-            <div className="space-y-6">
+            <div className="space-y-6 print:space-y-4">
               {exam.products.map((product, index) => (
-                <div key={product.id || index} className="p-4 border border-border bg-card rounded-lg shadow">
-                  <h5 className="text-md font-semibold mb-3 text-primary">
+                <div key={product.id || index} className="p-4 border border-border bg-card rounded-lg shadow print-product-container print:border print:border-gray-200 print:shadow-none print:bg-white">
+                  <h5 className="text-md font-semibold mb-3 text-primary print:border-b print:pb-2 print:mb-4">
                     Producto {index + 1}
                     {product.itemNumber && <span className="text-sm font-normal text-muted-foreground"> (Item: {product.itemNumber})</span>}
                   </h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 print:grid-cols-2 gap-x-6 gap-y-4">
                     <FetchedDetailItem label="Número de Item" value={product.itemNumber} />
                     <FetchedDetailItem label="Peso" value={product.weight} />
                     <FetchedDetailItem label="Marca" value={product.brand} />
@@ -94,13 +100,13 @@ const FetchedExamDetails: React.FC<{ exam: ExamDocument }> = ({ exam }) => {
                     <FetchedDetailItem label="Cantidad de Bultos" value={product.quantityPackages} />
                     <FetchedDetailItem label="Cantidad de Unidades" value={product.quantityUnits} />
                     <FetchedDetailItem label="Estado de Mercancía (Condición)" value={product.packagingCondition} />
-                    <div className="md:col-span-2 lg:col-span-3">
+                    <div className="md:col-span-2 lg:col-span-3 print:col-span-2">
                       <FetchedDetailItem label="Descripción" value={product.description} />
                     </div>
-                     <div className="md:col-span-2 lg:col-span-3">
+                     <div className="md:col-span-2 lg:col-span-3 print:col-span-2">
                       <FetchedDetailItem label="Observación" value={product.observation} />
                     </div>
-                    <div className="md:col-span-full pt-2 mt-2 border-t border-border">
+                    <div className="md:col-span-full pt-2 mt-2 border-t border-border print:col-span-2">
                        <FetchedDetailItem label="Estado General del Producto" value={getProductStatusText(product)} />
                     </div>
                   </div>
@@ -111,6 +117,13 @@ const FetchedExamDetails: React.FC<{ exam: ExamDocument }> = ({ exam }) => {
             <p className="text-muted-foreground">No hay productos registrados en este examen.</p>
           )}
         </div>
+        <Image
+            src="/FOOTEREXA.svg"
+            alt="Examen Footer"
+            width={800}
+            height={50}
+            className="w-full h-auto mt-6"
+        />
       </CardContent>
     </Card>
   );
@@ -130,6 +143,8 @@ export default function DatabasePage() {
       router.push('/');
     }
   }, [user, authLoading, router]);
+  
+  const handleCloseDetails = () => setFetchedExam(null);
 
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
@@ -143,7 +158,9 @@ export default function DatabasePage() {
     setFetchedExam(null);
 
     try {
-      const examDocRef = doc(db, "examenesPrevios", searchTermNE.trim());
+      // Normalize search term to uppercase for case-insensitive search
+      const normalizedNE = searchTermNE.trim().toUpperCase();
+      const examDocRef = doc(db, "examenesPrevios", normalizedNE);
       const docSnap = await getDoc(examDocRef);
 
       if (docSnap.exists()) {
@@ -171,8 +188,10 @@ export default function DatabasePage() {
     }
   };
 
-  // Show loader if auth is loading, or if user is not available,
-  // or if user is available but is not the static user (useEffect will redirect).
+  const handlePrint = () => {
+    window.print();
+  };
+
   if (authLoading || !user || (user && !user.isStaticUser) ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -181,12 +200,10 @@ export default function DatabasePage() {
     );
   }
 
-  // At this point, authLoading is false, user exists, and user.isStaticUser is true.
-  // Render the page content.
   return (
     <AppShell>
       <div className="py-2 md:py-5">
-        <Card className="w-full max-w-4xl mx-auto custom-shadow">
+        <Card className="w-full max-w-4xl mx-auto custom-shadow no-print">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-foreground">Base de Datos de Exámenes Previos</CardTitle>
             <CardDescription className="text-muted-foreground">
@@ -209,37 +226,34 @@ export default function DatabasePage() {
               <Button type="button" onClick={handleExport} variant="outline" className="w-full sm:w-auto" disabled={!fetchedExam || isLoading}>
                 <Download className="mr-2 h-4 w-4" /> Exportar
               </Button>
+              <Button type="button" onClick={handlePrint} variant="outline" className="w-full sm:w-auto" disabled={!fetchedExam || isLoading}>
+                <Printer className="mr-2 h-4 w-4" /> Imprimir
+              </Button>
             </form>
-
-            {isLoading && (
-              <div className="flex justify-center items-center py-6">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="ml-3 text-muted-foreground">Cargando examen...</p>
-              </div>
-            )}
-
-            {error && (
-              <div className="mt-4 p-4 bg-destructive/10 text-destructive border border-destructive/30 rounded-md text-center">
-                {error}
-              </div>
-            )}
-
-            {fetchedExam && !isLoading && <FetchedExamDetails exam={fetchedExam} />}
-
-            {!fetchedExam && !isLoading && !error && searchTermNE && (
-                 <div className="mt-4 p-4 bg-yellow-500/10 text-yellow-700 border border-yellow-500/30 rounded-md text-center">
-                    Inicie una búsqueda para ver resultados o verifique el NE ingresado.
-                 </div>
-            )}
-             {!fetchedExam && !isLoading && !error && !searchTermNE && (
-                 <div className="mt-4 p-4 bg-blue-500/10 text-blue-700 border border-blue-500/30 rounded-md text-center">
-                    Ingrese un NE para buscar un examen previo.
-                 </div>
-            )}
-
-
           </CardContent>
         </Card>
+
+        {isLoading && (
+          <div className="flex justify-center items-center py-6 no-print">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="ml-3 text-muted-foreground">Cargando examen...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-4 p-4 bg-destructive/10 text-destructive border border-destructive/30 rounded-md text-center no-print">
+            {error}
+          </div>
+        )}
+
+        {fetchedExam && !isLoading && <FetchedExamDetails exam={fetchedExam} onClose={handleCloseDetails} />}
+
+        {!fetchedExam && !isLoading && !error && (
+             <div className="mt-4 p-4 bg-blue-500/10 text-blue-700 border border-blue-500/30 rounded-md text-center no-print">
+                Ingrese un NE para buscar un examen previo.
+             </div>
+        )}
+
       </div>
     </AppShell>
   );
