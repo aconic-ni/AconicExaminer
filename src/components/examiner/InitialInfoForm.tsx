@@ -40,17 +40,15 @@ export function InitialInfoForm() {
     defaultValues: {
       ne: existingExamData?.ne || '',
       reference: existingExamData?.reference || '',
+      consignee: existingExamData?.consignee || '',
       manager: defaultManagerName || '',
       location: existingExamData?.location || '',
     },
   });
 
-function onSubmit(data: InitialInfoFormData) {
-  setExamData({
-    ...data,
-    reference: data.reference || "", // Ensure 'reference' is a string
-  });
-  setCurrentStep(ExamStep.PRODUCT_LIST);
+  function onSubmit(data: InitialInfoFormData) {
+    setExamData(data);
+    setCurrentStep(ExamStep.PRODUCT_LIST);
 }
 
   return (
@@ -83,6 +81,19 @@ function onSubmit(data: InitialInfoFormData) {
                     <FormLabel>Referencia (Contenedor, Guía, BL, Factura...)</FormLabel>
                     <FormControl>
                       <Input placeholder="Ej: MSKU1234567" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="consignee"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Consignatario *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nombre del consignatario" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
