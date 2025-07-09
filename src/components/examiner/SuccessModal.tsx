@@ -35,9 +35,10 @@ export function SuccessModal() {
     }
   
     try {
-      const examDocRef = doc(db, "examenesPrevios", examData.ne);
+      // Use uppercase NE for the document ID to ensure case-insensitivity
+      const examDocRef = doc(db, "examenesPrevios", examData.ne.toUpperCase());
   
-      // Sanitize products: convert undefined to null
+      // Sanitize products: convert undefined to null for Firestore compatibility
       const productsForDb = products.map((product) => {
         const newProduct: Partial<Product> = {};
         (Object.keys(product) as Array<keyof Product>).forEach((key) => {
@@ -51,10 +52,10 @@ export function SuccessModal() {
       });
   
       const dataToSave: Omit<ExamDocument, 'id'> = {
-        ...examData, // examData fields are mostly required or defaulted to ''
+        ...examData, // Contains original NE casing, consignee, etc.
         products: productsForDb,
         savedAt: Timestamp.fromDate(new Date()),
-        savedBy: user.email, // user.email can be string | null. Firestore accepts null.
+        savedBy: user.email,
       };
   
       await setDoc(examDocRef, dataToSave);
