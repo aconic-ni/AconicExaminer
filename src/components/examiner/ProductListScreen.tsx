@@ -47,9 +47,10 @@ export function ProductListScreen() {
       </CardHeader>
       <CardContent>
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md shadow">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                 <div><span className="font-semibold">NE:</span> {examData.ne}</div>
                 <div><span className="font-semibold">Referencia:</span> {examData.reference || 'N/A'}</div>
+                <div><span className="font-semibold">Consignatario:</span> {examData.consignee}</div>
                 <div><span className="font-semibold">Gestor:</span> {examData.manager}</div>
                 <div><span className="font-semibold">Ubicación:</span> {examData.location}</div>
             </div>
