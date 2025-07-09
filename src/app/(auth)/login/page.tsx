@@ -20,12 +20,9 @@ export default function LoginPage() {
     }
   }, [user, loading, router]);
 
-  const handleLoginSuccess = (isStaticUser?: boolean) => {
-    if (isStaticUser) {
-      router.push('/database');
-    } else {
-      router.push('/examiner');
-    }
+  const handleLoginSuccess = () => {
+    // The redirection is now handled by the useEffect above, which waits for the auth state to update.
+    // This function can be empty. The modal will unmount when the page navigates away.
   };
   
   if (loading || user) {
