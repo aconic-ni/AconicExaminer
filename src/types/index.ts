@@ -6,6 +6,7 @@ export interface ExamData {
   reference: string;
   manager: string;
   location: string;
+  consignee: string;
 }
 
 export interface Product {
@@ -50,5 +51,3 @@ export interface ExportableExamData extends ExamData {
   savedAt?: Timestamp | Date | null; // Allow null for consistency if field might be absent
   savedBy?: string | null;
 }
-
-    
