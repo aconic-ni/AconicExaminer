@@ -39,20 +39,33 @@ export function SuccessModal() {
       const examDocRef = doc(db, "examenesPrevios", examData.ne.toUpperCase());
   
       // Sanitize products: convert undefined to null for Firestore compatibility
-      const productsForDb = products.map((product) => {
-        const newProduct: Partial<Product> = {};
-        (Object.keys(product) as Array<keyof Product>).forEach((key) => {
-          if (product[key] === undefined || product[key] === null) {
-            newProduct[key] = null; // Firestore accepts null
-        } else {
-            newProduct[key] = product[key] as Exclude<Product[keyof Product], undefined>; // Exclude 'undefined' from the type
-        }
-        });
-        return newProduct as Product; // Cast as Product
+      const productsForDb = products.map((p) => {
+        // Using ?? null coalescing operator to convert undefined to null
+        return {
+          id: p.id,
+          itemNumber: p.itemNumber ?? null,
+          weight: p.weight ?? null,
+          description: p.description ?? null,
+          brand: p.brand ?? null,
+          model: p.model ?? null,
+          unitMeasure: p.unitMeasure ?? null,
+          serial: p.serial ?? null,
+          origin: p.origin ?? null,
+          numberPackages: p.numberPackages ?? null,
+          quantityPackages: p.quantityPackages ?? null,
+          quantityUnits: p.quantityUnits ?? null,
+          packagingCondition: p.packagingCondition ?? null,
+          observation: p.observation ?? null,
+          isConform: p.isConform,
+          isExcess: p.isExcess,
+          isMissing: p.isMissing,
+          isFault: p.isFault,
+        };
       });
   
       const dataToSave: Omit<ExamDocument, 'id'> = {
-        ...examData, // Contains original NE casing, consignee, etc.
+        ...examData,
+        reference: examData.reference ?? null,
         products: productsForDb,
         savedAt: Timestamp.fromDate(new Date()),
         savedBy: user.email,
@@ -126,3 +139,4 @@ export function SuccessModal() {
     </Dialog>
   );
 }
+
