@@ -148,7 +148,8 @@ export default function DatabasePage() {
 
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
-    if (!searchTermNE.trim()) {
+    const trimmedSearchTerm = searchTermNE.trim();
+    if (!trimmedSearchTerm) {
       setError("Por favor, ingrese un NE para buscar.");
       setFetchedExam(null);
       return;
@@ -157,16 +158,29 @@ export default function DatabasePage() {
     setError(null);
     setFetchedExam(null);
 
-    try {
-      // Normalize search term to uppercase for case-insensitive search
-      const normalizedNE = searchTermNE.trim().toUpperCase();
-      const examDocRef = doc(db, "examenesPrevios", normalizedNE);
-      const docSnap = await getDoc(examDocRef);
+    const potentialIds = [
+      trimmedSearchTerm.toUpperCase(),
+      trimmedSearchTerm.toLowerCase(),
+      trimmedSearchTerm,
+    ];
+    const uniquePotentialIds = Array.from(new Set(potentialIds));
 
-      if (docSnap.exists()) {
-        setFetchedExam(docSnap.data() as ExamDocument);
+    let foundExam: ExamDocument | null = null;
+
+    try {
+      for (const id of uniquePotentialIds) {
+        const examDocRef = doc(db, "examenesPrevios", id);
+        const docSnap = await getDoc(examDocRef);
+        if (docSnap.exists()) {
+          foundExam = docSnap.data() as ExamDocument;
+          break; // Document found, exit loop
+        }
+      }
+
+      if (foundExam) {
+        setFetchedExam(foundExam);
       } else {
-        setError("Archivo erróneo o no ha sido creado por gestor para el NE: " + searchTermNE);
+        setError("Archivo erróneo o no ha sido creado por gestor para el NE: " + trimmedSearchTerm);
       }
     } catch (err: any) {
       console.error("Error fetching document from Firestore: ", err);
@@ -179,6 +193,7 @@ export default function DatabasePage() {
       setIsLoading(false);
     }
   };
+
 
   const handleExport = () => {
     if (fetchedExam) {
