@@ -16,64 +16,62 @@ export function SuccessModal() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-const handleSaveToDatabase = async () => {
-  if (!examData || !user || !user.email) {
-    toast({
-      title: "Error al guardar",
-      description: "Faltan datos del examen o información del usuario.",
-      variant: "destructive",
-    });
-    return;
-  }
-  if (!examData.ne) {
-    toast({
-      title: "Error al guardar",
-      description: "El número NE (Seguimiento NX1) es requerido para guardar.",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  try {
-    const examDocRef = doc(db, "examenesPrevios", examData.ne);
-
+  const handleSaveToDatabase = async () => {
+    if (!examData || !user || !user.email) {
+      toast({
+        title: "Error al guardar",
+        description: "Faltan datos del examen o información del usuario.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!examData.ne) {
+      toast({
+        title: "Error al guardar",
+        description: "El número NE (Seguimiento NX1) es requerido para guardar.",
+        variant: "destructive",
+      });
+      return;
+    }
+  
+    try {
+      const examDocRef = doc(db, "examenesPrevios", examData.ne);
+  
       // Sanitize products: convert undefined to null
       const productsForDb = products.map((product) => {
-        // Define el tipo para newProduct para reflejar que las propiedades pueden ser null
-        const newProduct: { [K in keyof Product]: Product[K] extends undefined ? null : Product[K] | null } = {} as any; // Usamos as any temporalmente para la construcción
-
+        const newProduct: Partial<Product> = {};
         (Object.keys(product) as Array<keyof Product>).forEach((key) => {
-          if (product[key] === undefined) { // Solo necesitamos verificar undefined aquí, ya que null es aceptado por Firestore
+          if (product[key] === undefined || product[key] === null) {
             newProduct[key] = null; // Firestore accepts null
         } else {
-            // Asignamos el valor, permitiendo null si ya era null, o el tipo original si no era undefined
-            newProduct[key] = product[key] === null ? null : product[key] as any; // Usamos as any aquí también para simplificar la asignación después de la verificación de undefined
+            newProduct[key] = product[key] as Exclude<Product[keyof Product], undefined>; // Exclude 'undefined' from the type
         }
         });
-        return newProduct as Product; // Aún puedes castear como Product si tu tipo Product ya maneja null
+        return newProduct as Product; // Cast as Product
       });
+  
+      const dataToSave: Omit<ExamDocument, 'id'> = {
+        ...examData, // examData fields are mostly required or defaulted to ''
+        products: productsForDb,
+        savedAt: Timestamp.fromDate(new Date()),
+        savedBy: user.email, // user.email can be string | null. Firestore accepts null.
+      };
+  
+      await setDoc(examDocRef, dataToSave);
+      toast({
+        title: "Examen Guardado",
+        description: `El examen NE: ${examData.ne} ha sido guardado en la base de datos.`,
+      });
+    } catch (error: any) {
+      console.error("Error saving document to Firestore: ", error);
+      toast({
+        title: "Error al Guardar en BD",
+        description: `No se pudo guardar el examen en la base de datos. ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
 
-    const dataToSave: Omit<ExamDocument, 'id'> = {
-      ...examData, // examData fields are mostly required or defaulted to ''
-      products: productsForDb,
-      savedAt: Timestamp.fromDate(new Date()),
-      savedBy: user.email, // user.email can be string | null. Firestore accepts null.
-    };
-
-    await setDoc(examDocRef, dataToSave);
-    toast({
-      title: "Examen Guardado",
-      description: `El examen NE: ${examData.ne} ha sido guardado en la base de datos.`,
-    });
-  } catch (error: any) {
-    console.error("Error saving document to Firestore: ", error);
-    toast({
-      title: "Error al Guardar en BD",
-      description: `No se pudo guardar el examen en la base de datos. ${error.message}`,
-      variant: "destructive",
-    });
-  }
-};
 
   if (currentStep !== ExamStep.SUCCESS) {
     return null;
@@ -116,11 +114,11 @@ const handleSaveToDatabase = async () => {
           >
             <Save className="h-5 w-5 text-destructive-foreground" />
           </Button>
-          <Button onClick={() => setCurrentStep(ExamStep.PREVIEW)} variant="outline" className="w-full sm:w-auto">
-             <RotateCcw className="mr-2 h-4 w-4" /> Revisar Examen         
-          </Button>
           <Button onClick={() => resetApp()} className="btn-primary w-full sm:w-auto">
             <FilePlus className="mr-2 h-4 w-4" /> Empezar Nuevo
+          </Button>
+          <Button onClick={() => setCurrentStep(ExamStep.PREVIEW)} variant="outline" className="w-full sm:w-auto">
+             <RotateCcw className="mr-2 h-4 w-4" /> Revisar Examen
           </Button>
         </div>
       </DialogContent>
