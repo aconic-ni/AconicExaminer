@@ -5,6 +5,7 @@ export const initialInfoSchema = z.object({
   reference: z.string().optional(),
   manager: z.string().min(1, "Nombre del Gestor es requerido."),
   location: z.string().min(1, "Ubicación es requerida."),
+  consignee: z.string().min(1, "Consignatario es requerido."),
 });
 
 export type InitialInfoFormData = z.infer<typeof initialInfoSchema>;
