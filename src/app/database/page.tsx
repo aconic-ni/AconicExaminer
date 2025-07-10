@@ -47,7 +47,7 @@ const getProductStatusText = (product: Product): string => {
 // Component to display the fetched exam
 const FetchedExamDetails: React.FC<{ exam: ExamDocument; onClose: () => void }> = ({ exam, onClose }) => {
   return (
-    <Card className="mt-6 w-full custom-shadow" id="printable-area">
+    <Card className="mt-6 w-full max-w-5xl mx-auto custom-shadow" id="printable-area">
       <CardHeader>
         <Image
             src="/AconicExaminer/imagenes/HEADERSEXA.svg"
@@ -218,7 +218,7 @@ export default function DatabasePage() {
   return (
     <AppShell>
       <div className="py-2 md:py-5">
-        <Card className="w-full max-w-4xl mx-auto custom-shadow no-print">
+        <Card className="w-full max-w-5xl mx-auto custom-shadow no-print">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-foreground">Base de Datos de Exámenes Previos</CardTitle>
             <CardDescription className="text-muted-foreground">
@@ -256,15 +256,18 @@ export default function DatabasePage() {
         )}
 
         {error && (
-          <div className="mt-4 p-4 bg-destructive/10 text-destructive border border-destructive/30 rounded-md text-center no-print">
+          <div className="mt-4 p-4 bg-destructive/10 text-destructive border border-destructive/30 rounded-md text-center no-print max-w-5xl mx-auto">
             {error}
           </div>
         )}
+        
+        <div className="w-full max-w-5xl mx-auto">
+            {fetchedExam && !isLoading && <FetchedExamDetails exam={fetchedExam} onClose={handleCloseDetails} />}
+        </div>
 
-        {fetchedExam && !isLoading && <FetchedExamDetails exam={fetchedExam} onClose={handleCloseDetails} />}
 
         {!fetchedExam && !isLoading && !error && (
-             <div className="mt-4 p-4 bg-blue-500/10 text-blue-700 border border-blue-500/30 rounded-md text-center no-print">
+             <div className="mt-4 p-4 bg-blue-500/10 text-blue-700 border border-blue-500/30 rounded-md text-center no-print max-w-5xl mx-auto">
                 Ingrese un NE para buscar un examen previo.
              </div>
         )}
