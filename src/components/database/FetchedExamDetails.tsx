@@ -44,7 +44,7 @@ export const FetchedExamDetails: React.FC<{ exam: ExamDocument; onClose: () => v
     <Card className="mt-6 w-full max-w-5xl mx-auto custom-shadow" id="printable-area">
       <CardHeader>
         <Image
-            src="/imagenes/HEADERSEXA.svg"
+            src="/AconicExaminer/imagenes/HEADERSEXA.svg"
             alt="Examen Header"
             width={800}
             height={100}
@@ -112,7 +112,7 @@ export const FetchedExamDetails: React.FC<{ exam: ExamDocument; onClose: () => v
           )}
         </div>
         <Image
-            src="/imagenes/FOOTEREXA.svg"
+            src="/AconicExaminer/imagenes/FOOTEREXA.svg"
             alt="Examen Footer"
             width={800}
             height={50}
