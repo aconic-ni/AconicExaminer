@@ -39,6 +39,7 @@ export interface AppUser {
 }
 
 export interface ExamDocument extends ExamData {
+  id?: string; // Add optional id for mapping in reports
   products: Product[];
   savedAt: Timestamp; // Firestore Timestamp for when it was saved
   savedBy: string | null; // Email of the user who saved it
