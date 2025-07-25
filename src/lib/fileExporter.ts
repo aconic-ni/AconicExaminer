@@ -168,3 +168,50 @@ export function downloadExcelFile(data: ExportableExamData) {
   
   XLSX.writeFile(wb, `CustomsEX-p_${data.ne}_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
+
+export function downloadReportAsExcel(exams: ExamDocument[]) {
+  const now = new Date();
+  const fechaHoraExportacion = `${now.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'short' })}`;
+
+  const reportHeaders = [
+    'NE',
+    'Consignatario',
+    'Gestor',
+    'Fecha de Guardado',
+    'Cantidad de Productos',
+    'Guardado Por'
+  ];
+
+  const reportRows = exams.map(exam => [
+    exam.ne,
+    exam.consignee,
+    exam.manager,
+    exam.savedAt.toDate().toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'short' }),
+    exam.products?.length || 0,
+    exam.savedBy || 'N/A'
+  ]);
+
+  const ws_data = [
+    ['REPORTE DE EXÁMENES PREVIOS - CustomsEX-p'],
+    [`Generado el: ${fechaHoraExportacion}`],
+    [],
+    reportHeaders,
+    ...reportRows
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+  // Ajustar anchos de columna
+  const colWidths = reportHeaders.map((header, i) => ({
+    wch: Math.max(
+      header.length,
+      ...reportRows.map(row => String(row[i]).length)
+    ) + 2
+  }));
+  ws['!cols'] = colWidths;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Reporte de Exámenes");
+
+  XLSX.writeFile(wb, `Reporte_CustomsEX-p_${now.toISOString().split('T')[0]}.xlsx`);
+}
