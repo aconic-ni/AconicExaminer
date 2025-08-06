@@ -4,13 +4,29 @@ import type React from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { X } from 'lucide-react';
+import {
+  X,
+  Hash,
+  Weight,
+  FileText,
+  Tag,
+  Puzzle,
+  Ruler,
+  Fingerprint,
+  Globe,
+  Barcode,
+  Package,
+  Box,
+  ShieldCheck,
+  MessageSquare,
+  ClipboardList
+} from 'lucide-react';
 import type { ExamDocument, Product } from '@/types';
 import { Timestamp } from 'firebase/firestore';
 import type { Timestamp as FirestoreTimestamp } from 'firebase/firestore';
 
 // Helper component for displaying product details in the fetched exam
-const FetchedDetailItem: React.FC<{ label: string; value?: string | number | null | boolean | FirestoreTimestamp }> = ({ label, value }) => {
+const FetchedDetailItem: React.FC<{ label: string; value?: string | number | null | boolean | FirestoreTimestamp; icon?: React.ReactNode }> = ({ label, value, icon }) => {
   let displayValue: string;
   if (typeof value === 'boolean') {
     displayValue = value ? 'Sí' : 'No';
@@ -22,8 +38,11 @@ const FetchedDetailItem: React.FC<{ label: string; value?: string | number | nul
 
   return (
     <div>
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="text-sm text-foreground">{displayValue}</p>
+      <div className="flex items-center">
+        {icon && <span className="mr-2 text-primary">{icon}</span>}
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      </div>
+      <p className="text-sm text-foreground ml-6">{displayValue}</p>
     </div>
   );
 };
@@ -83,25 +102,25 @@ export const FetchedExamDetails: React.FC<{ exam: ExamDocument; onClose: () => v
                     {product.itemNumber && <span className="text-sm font-normal text-muted-foreground"> (Item: {product.itemNumber})</span>}
                   </h5>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 print:grid-cols-2 gap-x-6 gap-y-4">
-                    <FetchedDetailItem label="Número de Item" value={product.itemNumber} />
-                    <FetchedDetailItem label="Peso" value={product.weight} />
-                    <FetchedDetailItem label="Marca" value={product.brand} />
-                    <FetchedDetailItem label="Modelo" value={product.model} />
-                    <FetchedDetailItem label="Unidad de Medida" value={product.unitMeasure} />
-                    <FetchedDetailItem label="Serie" value={product.serial} />
-                    <FetchedDetailItem label="Origen" value={product.origin} />
-                    <FetchedDetailItem label="Numeración de Bultos" value={product.numberPackages} />
-                    <FetchedDetailItem label="Cantidad de Bultos" value={product.quantityPackages} />
-                    <FetchedDetailItem label="Cantidad de Unidades" value={product.quantityUnits} />
-                    <FetchedDetailItem label="Estado de Mercancía (Condición)" value={product.packagingCondition} />
+                    <FetchedDetailItem label="Número de Item" value={product.itemNumber} icon={<Hash size={16} />} />
+                    <FetchedDetailItem label="Peso" value={product.weight} icon={<Weight size={16} />} />
+                    <FetchedDetailItem label="Marca" value={product.brand} icon={<Tag size={16} />} />
+                    <FetchedDetailItem label="Modelo" value={product.model} icon={<Puzzle size={16} />} />
+                    <FetchedDetailItem label="Unidad de Medida" value={product.unitMeasure} icon={<Ruler size={16} />} />
+                    <FetchedDetailItem label="Serie" value={product.serial} icon={<Fingerprint size={16} />} />
+                    <FetchedDetailItem label="Origen" value={product.origin} icon={<Globe size={16} />} />
+                    <FetchedDetailItem label="Numeración de Bultos" value={product.numberPackages} icon={<Barcode size={16} />} />
+                    <FetchedDetailItem label="Cantidad de Bultos" value={product.quantityPackages} icon={<Package size={16} />} />
+                    <FetchedDetailItem label="Cantidad de Unidades" value={product.quantityUnits} icon={<Box size={16} />} />
+                    <FetchedDetailItem label="Estado de Mercancía (Condición)" value={product.packagingCondition} icon={<ShieldCheck size={16} />} />
                     <div className="md:col-span-2 lg:col-span-3 print:col-span-2">
-                      <FetchedDetailItem label="Descripción" value={product.description} />
+                      <FetchedDetailItem label="Descripción" value={product.description} icon={<FileText size={16} />} />
                     </div>
                      <div className="md:col-span-2 lg:col-span-3 print:col-span-2">
-                      <FetchedDetailItem label="Observación" value={product.observation} />
+                      <FetchedDetailItem label="Observación" value={product.observation} icon={<MessageSquare size={16} />} />
                     </div>
                     <div className="md:col-span-full pt-2 mt-2 border-t border-border print:col-span-2">
-                       <FetchedDetailItem label="Estado General del Producto" value={getProductStatusText(product)} />
+                       <FetchedDetailItem label="Estado General del Producto" value={getProductStatusText(product)} icon={<ClipboardList size={16} />} />
                     </div>
                   </div>
                 </div>
