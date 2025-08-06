@@ -84,6 +84,7 @@ export function BitacoraModal({ isOpen, onClose, examId }: BitacoraModalProps) {
         authorId: user.uid,
         authorName: user.displayName,
         authorRole: user.role as UserRole,
+        authorRoleTitle: user.roleTitle || null,
         createdAt: serverTimestamp(),
       });
       setNewComment('');
@@ -129,7 +130,7 @@ export function BitacoraModal({ isOpen, onClose, examId }: BitacoraModalProps) {
             {!isLoading && comments.map((comment, index) => (
               <div key={comment.id || index} className={cn("flex items-start gap-3", comment.authorId === user?.uid && "justify-end")}>
                 <div className={cn("rounded-lg p-3 max-w-[80%] w-fit", comment.authorId === user?.uid ? "bg-primary text-primary-foreground" : "bg-muted")}>
-                  <p className="text-sm font-semibold">{comment.authorName} <span className="text-xs opacity-80 font-normal">({comment.authorRole})</span></p>
+                  <p className="text-sm font-semibold">{comment.authorName} <span className="text-xs opacity-80 font-normal">({comment.authorRoleTitle || comment.authorRole})</span></p>
                   <p className="text-sm mt-1 whitespace-pre-wrap">{comment.text}</p>
                    <p className={cn("text-xs opacity-70 mt-2", comment.authorId === user?.uid ? "text-right" : "text-left")}>
                     {formatRelativeTime(comment.createdAt)}
