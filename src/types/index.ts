@@ -39,6 +39,7 @@ export interface AppUser {
   displayName?: string | null;
   isStaticUser?: boolean; // Flag for the static user
   role?: UserRole | null;
+  roleTitle?: string | null; // Custom title for display purposes
 }
 
 export interface ExamDocument extends ExamData {
@@ -57,6 +58,7 @@ export interface Comment {
     authorId: string;
     authorName: string;
     authorRole: UserRole;
+    authorRoleTitle?: string | null; // Custom title for display
     createdAt: Timestamp;
 }
 
