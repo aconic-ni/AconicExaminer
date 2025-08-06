@@ -1,5 +1,6 @@
+
 "use client";
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useAppContext, ExamStep } from '@/context/AppContext';
@@ -8,39 +9,57 @@ import { InitialInfoForm } from '@/components/examiner/InitialInfoForm';
 import { ProductListScreen } from '@/components/examiner/ProductListScreen';
 import { PreviewScreen } from '@/components/examiner/PreviewScreen';
 import { SuccessModal } from '@/components/examiner/SuccessModal';
+import { ExaminerWelcome } from '@/components/examiner/ExaminerWelcome';
 import { Loader2 } from 'lucide-react';
+import { SetDisplayNameModal } from '@/components/auth/SetDisplayNameModal';
 
 export default function ExaminerPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isProfileComplete } = useAuth();
   const { currentStep } = useAppContext();
   const router = useRouter();
+  const [isDisplayNameModalOpen, setIsDisplayNameModalOpen] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/'); // Redirect to login if not authenticated
+    if (!authLoading) {
+      // Redirect if not authenticated, or if user is static or an aforador
+      if (!user || user.isStaticUser || user.role === 'aforador') {
+        router.push('/');
+      }
     }
   }, [user, authLoading, router]);
-  
+
+  useEffect(() => {
+    if (!authLoading && user && !isProfileComplete) {
+      setIsDisplayNameModalOpen(true);
+    } else {
+      setIsDisplayNameModalOpen(false);
+    }
+  }, [user, authLoading, isProfileComplete]);
+
+  // Add a beforeunload listener to prevent accidental navigation
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      // Standard way to show a confirmation dialog
-      event.preventDefault();
-      // Chrome requires returnValue to be set
-      event.returnValue = '';
+      // Show confirmation dialog only if an exam is in progress
+      if (currentStep > ExamStep.WELCOME && currentStep < ExamStep.SUCCESS) {
+        event.preventDefault();
+        event.returnValue = ''; // For Chrome
+      }
     };
 
-    //window.addEventListener('beforeunload', handleBeforeUnload);
-    //return () => {
-      //window.removeEventListener('beforeunload', handleBeforeUnload);
-    //};
-  }, []);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [currentStep]);
 
 
-  if (authLoading) {
+  if (authLoading || (user && !isProfileComplete) || !user || user.isStaticUser || user.role === 'aforador') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg">Cargando autenticación...</p>
+        <p className="ml-4 text-lg">Cargando perfil...</p>
+        <SetDisplayNameModal isOpen={isDisplayNameModalOpen} />
       </div>
     );
   }
@@ -56,6 +75,8 @@ export default function ExaminerPage() {
 
   const renderStepContent = () => {
     switch (currentStep) {
+      case ExamStep.WELCOME:
+        return <ExaminerWelcome />;
       case ExamStep.INITIAL_INFO:
         return <InitialInfoForm />;
       case ExamStep.PRODUCT_LIST:
@@ -64,15 +85,15 @@ export default function ExaminerPage() {
         return <PreviewScreen />;
       case ExamStep.SUCCESS:
         // SuccessModal is a dialog, typically shown over other content.
-        // ProductListScreen might be a good background for it, or PreviewScreen.
         return <> <PreviewScreen /> <SuccessModal /> </>; // Show preview underneath success
       default:
-        return <InitialInfoForm />;
+        return <ExaminerWelcome />;
     }
   };
 
   return (
     <AppShell>
+       <SetDisplayNameModal isOpen={isDisplayNameModalOpen} />
       <div className="py-2 md:py-5">
          {renderStepContent()}
       </div>
