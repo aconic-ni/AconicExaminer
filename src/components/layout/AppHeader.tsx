@@ -1,8 +1,10 @@
+
 "use client";
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { FileText, LogOut, UserCircle, Camera, FileSpreadsheet } from 'lucide-react';
 import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
 
 export function AppHeader() {
   const { user, logout, loading } = useAuth();
@@ -36,8 +38,9 @@ export function AppHeader() {
             ) : user ? (
               <>
                 <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+                  {(user.roleTitle || user.role) && <Badge variant="secondary">{user.roleTitle || user.role}</Badge>}
                   <UserCircle className="h-5 w-5" />
-                  <span>{user.email}</span>
+                  <span>{user.isStaticUser ? user.displayName : user.email}</span>
                 </div>
                 {(user.isStaticUser || user.role === 'aforador') && (
                    <Button asChild variant="ghost" size="icon" className="text-primary hover:bg-chart-4 hover:text-primary-foreground transition-all duration-300">
