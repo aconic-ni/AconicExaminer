@@ -14,21 +14,24 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!loading && user) {
-      if (user.isStaticUser) {
-        router.push('/database');
-      } else {
-        router.push('/examiner');
-      }
+        // User is logged in, redirect them based on their role/type.
+        let targetPath = '/examiner'; // Default for 'gestor'
+        if (user.isStaticUser || user.role === 'aforador') {
+          targetPath = '/database';
+        }
+        router.push(targetPath);
     }
+    // If no user and not loading, stay on this page to show the login button.
   }, [user, loading, router]);
 
+
   const handleLoginSuccess = () => {
-    // The redirection is now handled by the useEffect above, which waits for the auth state to update.
-    // This function just needs to close the modal.
     setIsLoginModalOpen(false);
+    // The useEffect hook above will now handle the redirection.
   };
 
-  if (loading) {
+  // While loading, or if user object exists (and redirection is in progress), show a spinner.
+  if (loading || user) {
     return (
       <div className="min-h-screen flex items-center justify-center grid-bg">
         <Loader2 className="h-16 w-16 animate-spin text-white" />
@@ -36,13 +39,6 @@ export default function HomePage() {
     );
   }
 
-  if (user) {
-    return (
-       <div className="min-h-screen flex items-center justify-center grid-bg">
-        <Loader2 className="h-16 w-16 animate-spin text-white" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center grid-bg text-white p-4">
