@@ -9,7 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAppContext, ExamStep } from '@/context/AppContext';
 import type { InitialInfoFormData} from './FormParts/zodSchemas';
 import { initialInfoSchema } from './FormParts/zodSchemas';
-import { useAuth } from '@/context/AuthContext'; // Import useAuth
+import { useAuth } from '@/context/AuthContext';
+import { ArrowLeft } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 // Helper function to extract and format name from email
 function extractNameFromEmail(email?: string | null): string {
@@ -28,8 +30,9 @@ function extractNameFromEmail(email?: string | null): string {
 }
 
 export function InitialInfoForm() {
-  const { setExamData, setCurrentStep, examData: existingExamData } = useAppContext();
-  const { user } = useAuth(); // Get user from AuthContext
+  const { setExamData, setCurrentStep, examData: existingExamData, softSaveExam } = useAppContext();
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const defaultManagerName =
     existingExamData?.manager ||
@@ -46,15 +49,31 @@ export function InitialInfoForm() {
     },
   });
 
-  function onSubmit(data: InitialInfoFormData) {
-    setExamData(data);
-    setCurrentStep(ExamStep.PRODUCT_LIST);
-}
+  async function onSubmit(data: InitialInfoFormData) {
+    setExamData(data); // Update context locally first
+    try {
+      await softSaveExam(data, []); // Perform the initial save
+      toast({
+        title: "Progreso Guardado",
+        description: "La información inicial del examen ha sido guardada.",
+      });
+      setCurrentStep(ExamStep.PRODUCT_LIST);
+    } catch (error) {
+      toast({
+        title: "Error al Guardar",
+        description: "No se pudo guardar la información inicial. Por favor, inténtelo de nuevo.",
+        variant: "destructive",
+      });
+      console.error("Failed to soft save initial info:", error);
+    }
+  }
 
   return (
     <Card className="w-full max-w-3xl mx-auto custom-shadow">
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-gray-800">Nuevo Examen</CardTitle>
+        <CardTitle className="text-2xl font-semibold text-gray-800">
+            {existingExamData?.ne ? `Continuando Examen: ${existingExamData.ne}` : 'Nuevo Examen'}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -67,7 +86,7 @@ export function InitialInfoForm() {
                   <FormItem>
                     <FormLabel>NE (Seguimiento NX1) *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej: NX1-12345" {...field} value={field.value ?? ''} />
+                      <Input placeholder="Ej: NX1-12345" {...field} value={field.value ?? ''} disabled={!!existingExamData?.ne} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -126,9 +145,12 @@ export function InitialInfoForm() {
                 )}
               />
             </div>
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-between items-center pt-2">
+               <Button type="button" variant="ghost" onClick={() => setCurrentStep(ExamStep.WELCOME)}>
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+                </Button>
               <Button type="submit" className="btn-primary px-6 py-3">
-                Continuar
+                Guardar y Continuar
               </Button>
             </div>
           </form>
