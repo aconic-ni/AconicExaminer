@@ -50,6 +50,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
         displayName: userData.displayName,
         isStaticUser: false,
         role: userRole || 'gestor', // Assign role in context
+        roleTitle: userData.roleTitle || null,
       });
       setIsProfileComplete(!!userData.displayName);
 
@@ -61,6 +62,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
         displayName: null,
         isStaticUser: false,
         role: null, // No role yet
+        roleTitle: null,
       });
       setIsProfileComplete(false);
     }
