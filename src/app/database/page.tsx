@@ -8,13 +8,13 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, Search, Download, Printer } from 'lucide-react';
+import { Loader2, Search, Download, Printer, BookText } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import type { ExamDocument } from '@/types';
 import { downloadExcelFile } from '@/lib/fileExporter';
 import { FetchedExamDetails } from '@/components/database/FetchedExamDetails';
-
+import { BitacoraModal } from '@/components/database/BitacoraModal';
 
 export default function DatabasePage() {
   const { user, loading: authLoading, logout } = useAuth();
@@ -23,9 +23,10 @@ export default function DatabasePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fetchedExam, setFetchedExam] = useState<ExamDocument | null>(null);
+  const [isBitacoraModalOpen, setIsBitacoraModalOpen] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && (!user || !user.isStaticUser)) {
+    if (!authLoading && (!user || (!user.isStaticUser && user.role !== 'aforador'))) {
       router.push('/');
     }
   }, [user, authLoading, router]);
@@ -52,13 +53,15 @@ export default function DatabasePage() {
     const uniquePotentialIds = Array.from(new Set(potentialIds));
 
     let foundExam: ExamDocument | null = null;
+    let foundId: string | null = null;
 
     try {
       for (const id of uniquePotentialIds) {
         const examDocRef = doc(db, "examenesPrevios", id);
         const docSnap = await getDoc(examDocRef);
         if (docSnap.exists()) {
-          foundExam = docSnap.data() as ExamDocument;
+          foundExam = { id: docSnap.id, ...docSnap.data() } as ExamDocument;
+          foundId = docSnap.id;
           break; // Document found, exit loop
         }
       }
@@ -93,7 +96,7 @@ export default function DatabasePage() {
     window.print();
   };
 
-  if (authLoading || !user || (user && !user.isStaticUser) ) {
+  if (authLoading || !user || (!user.isStaticUser && user.role !== 'aforador')) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -127,6 +130,9 @@ export default function DatabasePage() {
               <Button type="button" onClick={handleExport} variant="outline" className="w-full sm:w-auto" disabled={!fetchedExam || isLoading}>
                 <Download className="mr-2 h-4 w-4" /> Exportar
               </Button>
+               <Button type="button" onClick={() => setIsBitacoraModalOpen(true)} variant="outline" className="w-full sm:w-auto" disabled={!fetchedExam || isLoading}>
+                <BookText className="mr-2 h-4 w-4" /> Bitácora
+              </Button>
               <Button type="button" onClick={handlePrint} variant="outline" className="w-full sm:w-auto" disabled={!fetchedExam || isLoading}>
                 <Printer className="mr-2 h-4 w-4" /> Imprimir
               </Button>
@@ -156,6 +162,14 @@ export default function DatabasePage() {
              <div className="mt-4 p-4 bg-blue-500/10 text-blue-700 border border-blue-500/30 rounded-md text-center no-print max-w-5xl mx-auto">
                 Ingrese un NE para buscar un examen previo.
              </div>
+        )}
+        
+        {fetchedExam && (
+            <BitacoraModal
+                isOpen={isBitacoraModalOpen}
+                onClose={() => setIsBitacoraModalOpen(false)}
+                examId={fetchedExam.id!}
+            />
         )}
 
       </div>
