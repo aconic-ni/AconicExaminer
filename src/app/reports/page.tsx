@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DatePickerWithRange } from '@/components/reports/DatePickerWithRange';
 import { DatePicker } from '@/components/reports/DatePicker';
-import { Loader2, Download, Search, Eye, Calendar, CalendarRange, Sparkles } from 'lucide-react';
+import { Loader2, Download, Search, Eye, Calendar, CalendarRange, Sparkles, MessageSquare } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import type { ExamDocument } from '@/types';
@@ -33,7 +33,7 @@ export default function ReportsPage() {
   const [selectedExam, setSelectedExam] = useState<ExamDocument | null>(null);
 
   useEffect(() => {
-    if (!authLoading && (!user || !user.isStaticUser)) {
+    if (!authLoading && (!user || (!user.isStaticUser && user.role !== 'aforador'))) {
       router.push('/');
     }
   }, [user, authLoading, router]);
@@ -55,15 +55,26 @@ export default function ReportsPage() {
       );
 
       const querySnapshot = await getDocs(q);
-      const fetchedExams: ExamDocument[] = [];
-      querySnapshot.forEach((doc) => {
-        fetchedExams.push({ id: doc.id, ...doc.data() } as ExamDocument);
-      });
       
-      fetchedExams.sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis());
+      const examPromises = querySnapshot.docs.map(async (docSnapshot) => {
+        const examData = { id: docSnapshot.id, ...docSnapshot.data() } as ExamDocument;
+        
+        // Fetch comment count for each exam
+        const commentsRef = collection(db, "examenesPrevios", docSnapshot.id, "comments");
+        const commentsSnapshot = await getDocs(commentsRef);
+        
+        return {
+          ...examData,
+          commentCount: commentsSnapshot.size, // Add commentCount to the object
+        };
+      });
 
-      setExams(fetchedExams);
-      if (fetchedExams.length === 0) {
+      const fetchedExamsWithCounts = await Promise.all(examPromises);
+      
+      fetchedExamsWithCounts.sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis());
+
+      setExams(fetchedExamsWithCounts);
+      if (fetchedExamsWithCounts.length === 0) {
         setError("No se encontraron exámenes en el periodo seleccionado.");
       }
 
@@ -127,7 +138,7 @@ export default function ReportsPage() {
     setSelectedExam(null);
   };
 
-  if (authLoading || !user || !user.isStaticUser) {
+  if (authLoading || !user || (!user.isStaticUser && user.role !== 'aforador')) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -208,7 +219,8 @@ export default function ReportsPage() {
                       <TableHead>Consignatario</TableHead>
                       <TableHead>Gestor</TableHead>
                       <TableHead>Fecha de Guardado</TableHead>
-                      <TableHead className="text-center">Cant. Productos</TableHead>
+                      <TableHead className="text-center">Productos</TableHead>
+                      <TableHead className="text-center">Bitácora</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -220,6 +232,12 @@ export default function ReportsPage() {
                         <TableCell>{exam.manager}</TableCell>
                         <TableCell>{exam.savedAt.toDate().toLocaleString('es-NI', { dateStyle: 'medium', timeStyle: 'short' })}</TableCell>
                         <TableCell className="text-center">{exam.products?.length || 0}</TableCell>
+                        <TableCell className="text-center">
+                            <div className="flex items-center justify-center">
+                                <MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" />
+                                {exam.commentCount ?? 0}
+                            </div>
+                        </TableCell>
                         <TableCell className="text-right">
                             <Button variant="ghost" size="sm" onClick={() => handleViewDetails(exam)}>
                                 <Eye className="mr-2 h-4 w-4" /> Ver
