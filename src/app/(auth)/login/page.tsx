@@ -12,7 +12,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      if (user.isStaticUser) {
+      if (user.isStaticUser || user.role === 'aforador') {
         router.push('/database');
       } else {
         router.push('/examiner');
@@ -39,3 +39,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
