@@ -17,7 +17,7 @@ export function ProductListScreen() {
     return (
       <div className="text-center py-10">
         <p>Error: Datos del examen no encontrados.</p>
-        <Button onClick={() => setCurrentStep(ExamStep.INITIAL_INFO)}>Volver al inicio</Button>
+        <Button onClick={() => setCurrentStep(ExamStep.WELCOME)}>Volver al inicio</Button>
       </div>
     );
   }
