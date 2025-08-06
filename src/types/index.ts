@@ -1,6 +1,8 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
+export type UserRole = 'gestor' | 'aforador';
+
 export interface ExamData {
   ne: string;
   reference?: string | null;
@@ -36,6 +38,7 @@ export interface AppUser {
   email: string | null;
   displayName?: string | null;
   isStaticUser?: boolean; // Flag for the static user
+  role?: UserRole | null;
 }
 
 export interface ExamDocument extends ExamData {
@@ -43,6 +46,18 @@ export interface ExamDocument extends ExamData {
   products: Product[];
   savedAt: Timestamp; // Firestore Timestamp for when it was saved
   savedBy: string | null; // Email of the user who saved it
+  status?: 'incomplete' | 'complete'; // To track exam status
+  lastUpdated?: Timestamp; // To track last soft save
+  commentCount?: number; // For report comment counts
+}
+
+export interface Comment {
+    id: string;
+    text: string;
+    authorId: string;
+    authorName: string;
+    authorRole: UserRole;
+    createdAt: Timestamp;
 }
 
 // Interface for data passed to downloadExcelFile
@@ -51,4 +66,17 @@ export interface ExportableExamData extends ExamData {
   products?: Product[] | null;
   savedAt?: Timestamp | Date | null; // Allow null for consistency if field might be absent
   savedBy?: string | null;
+}
+
+export interface AuditLogEntry {
+    examNe: string;
+    action: 'product_added' | 'product_updated' | 'product_deleted';
+    changedBy: string | null;
+    changedAt: Timestamp;
+    details: {
+        productId: string;
+        previousData?: Partial<Product> | null;
+        newData?: Partial<Product> | null;
+        [key: string]: any;
+    };
 }
