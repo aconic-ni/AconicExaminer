@@ -1,4 +1,3 @@
-
 "use client";
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
@@ -40,7 +39,7 @@ export function AppHeader() {
                   <UserCircle className="h-5 w-5" />
                   <span>{user.email}</span>
                 </div>
-                {user.isStaticUser && (
+                {(user.isStaticUser || user.role === 'aforador') && (
                    <Button asChild variant="ghost" size="icon" className="text-primary hover:bg-chart-4 hover:text-primary-foreground transition-all duration-300">
                      <Link href="/reports" aria-label="Ir a la página de reportes">
                        <FileSpreadsheet className="h-5 w-5" />
