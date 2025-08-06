@@ -10,6 +10,18 @@ import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { ExamDocument, Product } from '@/types';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
 
 export function SuccessModal() {
   const { currentStep, setCurrentStep, resetApp, examData, products } = useAppContext();
@@ -39,28 +51,16 @@ export function SuccessModal() {
       const examDocRef = doc(db, "examenesPrevios", examData.ne.toUpperCase());
   
       // Sanitize products: convert undefined to null for Firestore compatibility
-      const productsForDb = products.map((p) => {
-        // Using ?? null coalescing operator to convert undefined to null
-        return {
-          id: p.id,
-          itemNumber: p.itemNumber ?? null,
-          weight: p.weight ?? null,
-          description: p.description ?? null,
-          brand: p.brand ?? null,
-          model: p.model ?? null,
-          unitMeasure: p.unitMeasure ?? null,
-          serial: p.serial ?? null,
-          origin: p.origin ?? null,
-          numberPackages: p.numberPackages ?? null,
-          quantityPackages: p.quantityPackages ?? null,
-          quantityUnits: p.quantityUnits ?? null,
-          packagingCondition: p.packagingCondition ?? null,
-          observation: p.observation ?? null,
-          isConform: p.isConform,
-          isExcess: p.isExcess,
-          isMissing: p.isMissing,
-          isFault: p.isFault,
-        };
+      const productsForDb = products.map((p): Product => {
+        // Create a new object from p to avoid direct mutation
+        const productCopy = { ...p };
+        // Iterate over keys and convert undefined to null
+        for (const key in productCopy) {
+            if (productCopy[key as keyof Product] === undefined) {
+                (productCopy as any)[key] = null;
+            }
+        }
+        return productCopy;
       });
   
       const dataToSave: Omit<ExamDocument, 'id'> = {
@@ -69,11 +69,13 @@ export function SuccessModal() {
         products: productsForDb,
         savedAt: Timestamp.fromDate(new Date()),
         savedBy: user.email,
+        status: 'complete', // Mark as complete
+        lastUpdated: Timestamp.fromDate(new Date()),
       };
   
       await setDoc(examDocRef, dataToSave);
       toast({
-        title: "Examen Guardado",
+        title: "Examen Finalizado y Guardado",
         description: `El examen NE: ${examData.ne} ha sido guardado en la base de datos.`,
       });
     } catch (error: any) {
@@ -119,24 +121,41 @@ export function SuccessModal() {
               </div>
            </div>
         </DialogDescription>
-        <div className="mt-6 flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:gap-3 sm:justify-center items-center">
-          <Button
-            onClick={handleSaveToDatabase}
-            variant="destructive"
-            size="icon"
-            aria-label="Guardar en Base de Datos"
-          >
-            <Save className="h-5 w-5 text-destructive-foreground" />
-          </Button>
-          <Button onClick={() => resetApp()} className="btn-primary w-full sm:w-auto">
-            <FilePlus className="mr-2 h-4 w-4" /> Empezar Nuevo
-          </Button>
-          <Button onClick={() => setCurrentStep(ExamStep.PREVIEW)} variant="outline" className="w-full sm:w-auto">
-             <RotateCcw className="mr-2 h-4 w-4" /> Revisar Examen
-          </Button>
+        <div className="mt-6 flex flex-col space-y-3 items-center">
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            <Button
+              onClick={handleSaveToDatabase}
+              variant="default"
+              className="btn-primary w-full"
+              aria-label="Finalizar y Guardar en Base de Datos"
+            >
+              <Save className="h-5 w-5 mr-2" /> Finalizar y Guardar
+            </Button>
+            <Button onClick={() => setCurrentStep(ExamStep.PREVIEW)} variant="outline" className="w-full">
+               <RotateCcw className="mr-2 h-4 w-4" /> Revisar Examen
+            </Button>
+          </div>
+          <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button className="btn-secondary w-full">
+                  <FilePlus className="mr-2 h-4 w-4" /> Empezar Nuevo
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                  <AlertDialogHeader>
+                      <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                          Está a punto de iniciar un nuevo examen. Se borrará toda la información del examen actual que no haya sido guardada en la base de datos.
+                      </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => resetApp()}>Sí, empezar nuevo</AlertDialogAction>
+                  </AlertDialogFooter>
+              </AlertDialogContent>
+          </AlertDialog>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
