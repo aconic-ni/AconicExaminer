@@ -1,10 +1,11 @@
 
 "use client";
 import type React from 'react';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { onAuthStateChanged, signOut as firebaseSignOut, type User as FirebaseUser, type Auth } from 'firebase/auth';
-import { auth } from '@/lib/firebase'; // Firebase auth instance
-import type { AppUser } from '@/types';
+import { auth, db } from '@/lib/firebase'; // Firebase auth instance and db
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import type { AppUser, UserRole } from '@/types';
 import { useFirebaseApp } from './FirebaseAppContext';
 
 interface AuthContextType {
@@ -12,6 +13,8 @@ interface AuthContextType {
   loading: boolean;
   logout: () => Promise<void>;
   setStaticUser: (user: AppUser | null) => void; // To set static user
+  isProfileComplete: boolean;
+  updateUserProfile: (name: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,7 +22,78 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isProfileComplete, setIsProfileComplete] = useState(false);
   const { isFirebaseInitialized } = useFirebaseApp();
+
+  const checkUserProfile = useCallback(async (firebaseUser: FirebaseUser) => {
+    if (firebaseUser.isAnonymous) {
+      setUser(null);
+      setIsProfileComplete(false);
+      return;
+    }
+
+    const userDocRef = doc(db, 'users', firebaseUser.uid);
+    const docSnap = await getDoc(userDocRef);
+
+    if (docSnap.exists()) {
+      const userData = docSnap.data();
+      const userRole = userData.role || null;
+      
+      // If user exists but has no role, assign 'gestor' by default
+      if (!userRole) {
+        await setDoc(userDocRef, { role: 'gestor' }, { merge: true });
+      }
+      
+      setUser({
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: userData.displayName,
+        isStaticUser: false,
+        role: userRole || 'gestor', // Assign role in context
+      });
+      setIsProfileComplete(!!userData.displayName);
+
+    } else {
+      // New user, profile is incomplete
+      setUser({
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: null,
+        isStaticUser: false,
+        role: null, // No role yet
+      });
+      setIsProfileComplete(false);
+    }
+  }, []);
+
+  const updateUserProfile = async (name: string) => {
+    if (!user) throw new Error("User not authenticated");
+    setLoading(true);
+    const userDocRef = doc(db, 'users', user.uid);
+    try {
+      // When a new user sets their name, also set their default role.
+      const userDataToSet: { displayName: string; email: string | null; createdAt?: any, role?: UserRole } = {
+        displayName: name,
+        email: user.email,
+      };
+
+      const docSnap = await getDoc(userDocRef);
+      if (!docSnap.exists() || !docSnap.data().role) {
+          userDataToSet.role = 'gestor'; // Default role
+          userDataToSet.createdAt = serverTimestamp();
+      }
+
+      await setDoc(userDocRef, userDataToSet, { merge: true });
+      
+      setUser(prevUser => prevUser ? { ...prevUser, displayName: name, role: prevUser.role || 'gestor' } : null);
+      setIsProfileComplete(true);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   useEffect(() => {
     if (!isFirebaseInitialized) {
@@ -27,36 +101,34 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       return;
     }
 
-    // If a static user is already set (e.g. from LoginModal), don't override with Firebase auth state
     if (user?.isStaticUser) {
       setLoading(false);
+      setIsProfileComplete(true);
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth as Auth, (firebaseUser: FirebaseUser | null) => {
+    const unsubscribe = onAuthStateChanged(auth as Auth, async (firebaseUser: FirebaseUser | null) => {
+      setLoading(true);
       if (firebaseUser) {
-        setUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          isStaticUser: false,
-        });
+        await checkUserProfile(firebaseUser);
       } else {
         setUser(null);
+        setIsProfileComplete(false);
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [isFirebaseInitialized, user?.isStaticUser]);
+  }, [isFirebaseInitialized, user?.isStaticUser, checkUserProfile]);
 
   const logout = async () => {
     setLoading(true);
     try {
-      if (!user?.isStaticUser) { // Only sign out from Firebase if it's a Firebase user
+      if (!user?.isStaticUser) {
         await firebaseSignOut(auth as Auth);
       }
-      setUser(null); // Clear user for both static and Firebase users
+      setUser(null);
+      setIsProfileComplete(false);
     } catch (error) {
       console.error("Error signing out: ", error);
     } finally {
@@ -66,11 +138,14 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
   const setStaticUser = (staticUser: AppUser | null) => {
     setUser(staticUser);
-    setLoading(false); // Assuming static user login is immediate
+    if (staticUser) {
+      setIsProfileComplete(true);
+    }
+    setLoading(false); 
   };
   
   return (
-    <AuthContext.Provider value={{ user, loading, logout, setStaticUser }}>
+    <AuthContext.Provider value={{ user, loading, logout, setStaticUser, isProfileComplete, updateUserProfile }}>
       {children}
     </AuthContext.Provider>
   );
