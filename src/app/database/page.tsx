@@ -22,8 +22,9 @@ export default function DatabasePage() {
   const [fetchedExam, setFetchedExam] = useState<ExamDocument | null>(null);
 
   useEffect(() => {
-    if (!authLoading && (!user || (!user.isStaticUser && user.role !== 'aforador'))) {
-      router.push('/');
+    if (!authLoading && !user) {
+        // Redirect to home if not logged in
+        router.push('/');
     }
   }, [user, authLoading, router]);
   
@@ -77,7 +78,7 @@ export default function DatabasePage() {
     }
   };
 
-  if (authLoading || !user || (!user.isStaticUser && user.role !== 'aforador')) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
