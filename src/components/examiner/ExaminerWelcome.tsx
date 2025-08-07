@@ -1,16 +1,19 @@
 
 "use client";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, FilePlus, RefreshCw } from 'lucide-react';
+import { Loader2, Search, FilePlus, RefreshCw, Inbox, PlayCircle } from 'lucide-react';
 import { useAppContext, ExamStep } from '@/context/AppContext';
 import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { ExamDocument } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+import { Badge } from '../ui/badge';
+import { Timestamp } from 'firebase/firestore';
+
 
 export function ExaminerWelcome() {
   const { setCurrentStep, setExamData, setProducts, resetApp } = useAppContext();
@@ -19,11 +22,80 @@ export function ExaminerWelcome() {
   const [neToRecover, setNeToRecover] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [assignedExams, setAssignedExams] = useState<ExamDocument[]>([]);
+  const [isLoadingAssigned, setIsLoadingAssigned] = useState(true);
   const { toast } = useToast();
 
+  useEffect(() => {
+    const fetchAssignedExams = async () => {
+      if (!user?.displayName) {
+        setIsLoadingAssigned(false);
+        return;
+      }
+      setIsLoadingAssigned(true);
+      try {
+        const q = query(
+            collection(db, "examenesPrevios"), 
+            where("assignedTo", "==", user.displayName),
+            where("status", "==", "incomplete")
+        );
+        const querySnapshot = await getDocs(q);
+        const exams = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExamDocument));
+        exams.sort((a,b) => (a.assignedAt?.toMillis() ?? 0) - (b.assignedAt?.toMillis() ?? 0));
+        setAssignedExams(exams);
+      } catch (err) {
+        console.error("Error fetching assigned exams:", err);
+        toast({
+            title: "Error al Cargar Asignaciones",
+            description: "No se pudieron cargar los previos asignados. Verifique las reglas de Firestore.",
+            variant: "destructive"
+        });
+      } finally {
+        setIsLoadingAssigned(false);
+      }
+    };
+
+    fetchAssignedExams();
+  }, [user, toast]);
+
   const handleStartNew = () => {
-    resetApp(); // Ensure everything is clean
+    resetApp();
     setCurrentStep(ExamStep.INITIAL_INFO);
+  };
+  
+  const handleStartAssigned = async (exam: ExamDocument) => {
+    setIsLoading(true);
+    // 1. Update the document to set the `createdAt` timestamp (start of exam work)
+    try {
+        const examDocRef = doc(db, "examenesPrevios", exam.ne.toUpperCase());
+        await updateDoc(examDocRef, {
+            createdAt: serverTimestamp()
+        });
+        
+        // 2. Load data into context
+        setExamData({
+            ne: exam.ne,
+            reference: exam.reference,
+            consignee: exam.consignee,
+            location: exam.location,
+            manager: exam.manager
+        }, true); // isRecovery = true to enable logging
+        setProducts(exam.products || []);
+    
+        toast({
+          title: "Examen Iniciado",
+          description: `Comenzando trabajo en el examen ${exam.ne}.`,
+        });
+    
+        // 3. Move to the product list step
+        setCurrentStep(ExamStep.PRODUCT_LIST);
+
+    } catch (err) {
+        console.error("Error starting assigned exam:", err);
+        toast({ title: "Error", description: "No se pudo iniciar el examen asignado.", variant: "destructive" });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   const handleRecover = async () => {
@@ -41,26 +113,23 @@ export function ExaminerWelcome() {
       if (docSnap.exists()) {
         const recoveredExam = docSnap.data() as ExamDocument;
         
-        // Load data into context and flag as recovery
         setExamData({
             ne: recoveredExam.ne,
             reference: recoveredExam.reference,
             consignee: recoveredExam.consignee,
             location: recoveredExam.location,
             manager: recoveredExam.manager
-        }, true); // true indicates this is a recovery
+        }, true);
         setProducts(recoveredExam.products || []);
 
         toast({
           title: "Examen Recuperado",
           description: `Se cargó el progreso del examen ${recoveredExam.ne}.`,
         });
-
-        // Move to the product list step
         setCurrentStep(ExamStep.PRODUCT_LIST);
 
       } else {
-        setError(`No se encontró ningún examen en progreso para el NE: ${neToRecover}`);
+        setError(`No se encontró ningún examen para el NE: ${neToRecover}`);
         toast({
           title: "Error de Recuperación",
           description: `No se encontró un examen para el NE: ${neToRecover}`,
@@ -81,26 +150,31 @@ export function ExaminerWelcome() {
   };
   
   const welcomeName = user?.displayName ? user.displayName.split(' ')[0] : 'Gestor';
+  
+  const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
+    if (!timestamp) return 'N/A';
+    return timestamp.toDate().toLocaleString('es-NI', { dateStyle: 'medium', timeStyle: 'short' });
+  };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto custom-shadow">
+    <div className="w-full max-w-4xl mx-auto space-y-6">
+    <Card className="custom-shadow">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-semibold">Bienvenido, {welcomeName}</CardTitle>
         <CardDescription>¿Qué desea hacer hoy?</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {!isRecovering ? (
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button onClick={() => setIsRecovering(true)} size="lg" variant="outline" className="h-20 text-lg">
-              <RefreshCw className="mr-3 h-6 w-6" />
-              Continuar Examen Previo
-            </Button>
-            <Button onClick={handleStartNew} size="lg" className="h-20 text-lg btn-primary">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+             <Button onClick={handleStartNew} size="lg" className="h-20 text-lg btn-primary">
               <FilePlus className="mr-3 h-6 w-6" />
               Empezar Examen Nuevo
             </Button>
+            <Button onClick={() => setIsRecovering(!isRecovering)} size="lg" variant="outline" className="h-20 text-lg">
+              <RefreshCw className="mr-3 h-6 w-6" />
+              {isRecovering ? 'Ocultar Recuperación' : 'Continuar/Recuperar Examen'}
+            </Button>
           </div>
-        ) : (
+        {isRecovering && (
           <div className="p-4 border rounded-md bg-secondary/30">
             <h3 className="font-semibold text-center mb-3">Recuperar Examen no Finalizado</h3>
             <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -119,14 +193,51 @@ export function ExaminerWelcome() {
               </Button>
             </div>
             {error && <p className="text-destructive text-sm mt-2 text-center">{error}</p>}
-            <div className="mt-4 text-center">
-              <Button variant="link" onClick={() => setIsRecovering(false)}>
-                O empezar un examen nuevo
-              </Button>
-            </div>
           </div>
         )}
       </CardContent>
     </Card>
+
+    <Card className="custom-shadow">
+        <CardHeader>
+            <CardTitle className="text-xl flex items-center gap-2"><Inbox/> Mis Asignaciones</CardTitle>
+            <CardDescription>Estos son los exámenes previos que se le han asignado para su gestión.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            {isLoadingAssigned && (
+                <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary"/>
+                    <p className="ml-2 text-muted-foreground">Cargando asignaciones...</p>
+                </div>
+            )}
+            {!isLoadingAssigned && assignedExams.length === 0 && (
+                <div className="text-center py-6 px-4 bg-secondary/30 rounded-lg">
+                    <p className="text-muted-foreground">No tiene exámenes previos asignados pendientes.</p>
+                </div>
+            )}
+            {!isLoadingAssigned && assignedExams.length > 0 && (
+                <div className="space-y-3">
+                    {assignedExams.map(exam => (
+                        <div key={exam.id} className="flex flex-col sm:flex-row items-center justify-between p-3 border rounded-lg bg-card hover:bg-muted/50 transition-colors">
+                            <div className="flex-1 mb-2 sm:mb-0">
+                                <p className="font-bold text-primary">{exam.ne}</p>
+                                <p className="text-sm text-foreground">{exam.consignee}</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Asignado por {exam.requestedBy} el {formatTimestamp(exam.assignedAt)}
+                                </p>
+                            </div>
+                            <Button size="sm" onClick={() => handleStartAssigned(exam)} disabled={isLoading}>
+                                <PlayCircle className="mr-2 h-4 w-4"/>
+                                Empezar Previo
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </CardContent>
+    </Card>
+
+    </div>
   );
 }
+
