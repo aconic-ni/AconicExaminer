@@ -12,7 +12,6 @@ interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
   logout: () => Promise<void>;
-  setStaticUser: (user: AppUser | null) => void; // To set static user
   isProfileComplete: boolean;
   updateUserProfile: (name: string) => Promise<void>;
 }
@@ -48,7 +47,6 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         displayName: userData.displayName,
-        isStaticUser: false,
         role: userRole || 'gestor', // Assign role in context
         roleTitle: userData.roleTitle || null,
       });
@@ -60,7 +58,6 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         displayName: null,
-        isStaticUser: false,
         role: null, // No role yet
         roleTitle: null,
       });
@@ -103,12 +100,6 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       return;
     }
 
-    if (user?.isStaticUser) {
-      setLoading(false);
-      setIsProfileComplete(true);
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth as Auth, async (firebaseUser: FirebaseUser | null) => {
       setLoading(true);
       if (firebaseUser) {
@@ -121,14 +112,12 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     });
 
     return () => unsubscribe();
-  }, [isFirebaseInitialized, user?.isStaticUser, checkUserProfile]);
+  }, [isFirebaseInitialized, checkUserProfile]);
 
   const logout = async () => {
     setLoading(true);
     try {
-      if (!user?.isStaticUser) {
-        await firebaseSignOut(auth as Auth);
-      }
+      await firebaseSignOut(auth as Auth);
       setUser(null);
       setIsProfileComplete(false);
     } catch (error) {
@@ -137,17 +126,9 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       setLoading(false);
     }
   };
-
-  const setStaticUser = (staticUser: AppUser | null) => {
-    setUser(staticUser);
-    if (staticUser) {
-      setIsProfileComplete(true);
-    }
-    setLoading(false); 
-  };
   
   return (
-    <AuthContext.Provider value={{ user, loading, logout, setStaticUser, isProfileComplete, updateUserProfile }}>
+    <AuthContext.Provider value={{ user, loading, logout, isProfileComplete, updateUserProfile }}>
       {children}
     </AuthContext.Provider>
   );
