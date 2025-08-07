@@ -30,7 +30,7 @@ export function BitacoraModal({ isOpen, onClose, examId }: BitacoraModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const canComment = user && !user.isStaticUser && (user.role === 'gestor' || user.role === 'aforador');
+  const canComment = user && (user.role === 'gestor' || user.role === 'aforador' || user.role === 'ejecutivo' || user.role === 'coordinadora');
 
   useEffect(() => {
     if (!isOpen || !examId) return;
