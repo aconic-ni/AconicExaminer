@@ -21,9 +21,10 @@ export default function ExaminerPage() {
 
   useEffect(() => {
     if (!authLoading) {
-      // Redirect if not authenticated, or if user is static or an aforador
-      if (!user || user.isStaticUser || user.role === 'aforador') {
-        router.push('/');
+      // Redirect if not authenticated, or if user is not a 'gestor'
+      const allowedRoles = ['gestor'];
+      if (!user || (user.role && !allowedRoles.includes(user.role))) {
+          router.push('/');
       }
     }
   }, [user, authLoading, router]);
@@ -54,7 +55,7 @@ export default function ExaminerPage() {
   }, [currentStep]);
 
 
-  if (authLoading || (user && !isProfileComplete) || !user || user.isStaticUser || user.role === 'aforador') {
+  if (authLoading || (user && !isProfileComplete) || !user || (user.role && !['gestor'].includes(user.role))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
