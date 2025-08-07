@@ -142,11 +142,18 @@ export function downloadExcelFile(data: ExportableExamData) {
     systemDetailsSheetData.push(['Guardado por (correo):', 'N/A (No guardado en BD aún o dato no disponible)']);
   }
 
-  if (data.savedAt) {
-    const savedDate = data.savedAt instanceof Date ? data.savedAt : (data.savedAt as Timestamp).toDate();
-    systemDetailsSheetData.push(['Fecha y Hora de Guardado:', savedDate.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' })]);
+  if (data.createdAt) {
+    const createdAtDate = data.createdAt instanceof Date ? data.createdAt : (data.createdAt as Timestamp).toDate();
+    systemDetailsSheetData.push(['Fecha y Hora de Inicio:', createdAtDate.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' })]);
   } else {
-     systemDetailsSheetData.push(['Fecha y Hora de Guardado:', 'N/A (No guardado en BD aún o dato no disponible)']);
+     systemDetailsSheetData.push(['Fecha y Hora de Inicio:', 'N/A']);
+  }
+  
+  if (data.completedAt) {
+    const completedAtDate = data.completedAt instanceof Date ? data.completedAt : (data.completedAt as Timestamp).toDate();
+    systemDetailsSheetData.push(['Fecha y Hora de Finalización:', completedAtDate.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' })]);
+  } else {
+     systemDetailsSheetData.push(['Fecha y Hora de Finalización:', 'Examen no finalizado']);
   }
   
   systemDetailsSheetData.push(['Fecha y Hora de Exportación:', fechaHoraExportacion]);
@@ -172,12 +179,14 @@ export function downloadExcelFile(data: ExportableExamData) {
 export function downloadReportAsExcel(exams: ExamDocument[]) {
   const now = new Date();
   const fechaHoraExportacion = `${now.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'short' })}`;
+  const formatTimestamp = (ts: Timestamp | undefined | null) => ts ? ts.toDate().toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'short' }) : 'N/A';
 
   const reportHeaders = [
     'NE',
     'Consignatario',
     'Gestor',
-    'Fecha de Guardado',
+    'Inicio de Previo',
+    'Fin de Previo',
     'Cantidad de Productos',
     'Guardado Por'
   ];
@@ -186,7 +195,8 @@ export function downloadReportAsExcel(exams: ExamDocument[]) {
     exam.ne,
     exam.consignee,
     exam.manager,
-    exam.savedAt.toDate().toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'short' }),
+    formatTimestamp(exam.createdAt),
+    formatTimestamp(exam.completedAt),
     exam.products?.length || 0,
     exam.savedBy || 'N/A'
   ]);
@@ -215,3 +225,5 @@ export function downloadReportAsExcel(exams: ExamDocument[]) {
 
   XLSX.writeFile(wb, `Reporte_CustomsEX-p_${now.toISOString().split('T')[0]}.xlsx`);
 }
+
+    
