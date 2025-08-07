@@ -53,7 +53,7 @@ export function SetDisplayNameModal({ isOpen }: SetDisplayNameModalProps) {
           <div>
             <Label htmlFor="displayName" className="flex items-center text-sm font-medium text-foreground mb-1">
               <User className="mr-2 h-4 w-4 text-primary" />
-              Nombre Completo del Gestor
+              Nombre y Apellido (Ej. "John Doe")
             </Label>
             <Input
               id="displayName"
@@ -62,7 +62,7 @@ export function SetDisplayNameModal({ isOpen }: SetDisplayNameModalProps) {
               onChange={(e) => setDisplayName(e.target.value)}
               required
               className="w-full px-4 py-3 text-foreground placeholder:text-muted-foreground border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Ej: Juan Pérez"
+              placeholder="Ej: John Doe"
             />
           </div>
           <DialogFooter>
