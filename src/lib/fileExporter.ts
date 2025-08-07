@@ -1,257 +1,238 @@
 
-"use client";
-import type React from 'react';
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import type { ExamData, Product, AppUser as AuthAppUser, ExamDocument, AuditLogEntry } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
-import { useAuth } from './AuthContext';
-import { doc, setDoc, Timestamp, addDoc, collection, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast';
+import type { ExamData, Product, ExamDocument, ExportableExamData } from '@/types';
+import type { Timestamp } from 'firebase/firestore';
+import * as XLSX from 'xlsx';
 
-export enum ExamStep {
-  WELCOME = 0,
-  INITIAL_INFO = 1,
-  PRODUCT_LIST = 2,
-  PREVIEW = 3,
-  SUCCESS = 4,
-}
+export function downloadTxtFile(examData: ExamData, products: Product[]) {
+  let content = `EXAMEN PREVIO AGENCIA ACONIC - CustomsEX-p\n`;
+  content += `===========================================\n\n`;
+  content += `INFORMACIÓN GENERAL:\n`;
+  content += `NE: ${examData.ne}\n`;
+  content += `Referencia: ${examData.reference || 'N/A'}\n`;
+  content += `Consignatario: ${examData.consignee}\n`;
+  content += `Gestor: ${examData.manager}\n`;
+  content += `Ubicación: ${examData.location}\n\n`;
+  content += `PRODUCTOS:\n`;
 
-interface AppContextType {
-  examData: ExamData | null;
-  products: Product[];
-  currentStep: ExamStep;
-  editingProduct: Product | null;
-  isAddProductModalOpen: boolean;
-  isProductDetailModalOpen: boolean;
-  productToView: Product | null;
-  setExamData: (data: ExamData, isRecovery?: boolean) => void;
-  setProducts: (products: Product[]) => void;
-  addProduct: (product: Omit<Product, 'id'>) => void;
-  updateProduct: (updatedProduct: Product) => void;
-  deleteProduct: (productId: string) => void;
-  setCurrentStep: (step: ExamStep) => void;
-  setEditingProduct: (product: Product | null) => void;
-  openAddProductModal: (productToEdit?: Product | null) => void;
-  closeAddProductModal: () => void;
-  openProductDetailModal: (product: Product) => void;
-  closeProductDetailModal: () => void;
-  resetApp: () => void;
-  softSaveExam: (examData: ExamData, products: Product[]) => Promise<void>;
-}
-
-const AppContext = createContext<AppContextType | undefined>(undefined);
-
-export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  const [examData, setExamDataState] = useState<ExamData | null>(null);
-  const [products, setProductsState] = useState<Product[]>([]);
-  const [currentStep, setCurrentStepState] = useState<ExamStep>(ExamStep.WELCOME);
-  const [editingProduct, setEditingProductState] = useState<Product | null>(null);
-  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
-  const [isProductDetailModalOpen, setIsProductDetailModalOpen] = useState(false);
-  const [productToView, setProductToView] = useState<Product | null>(null);
-  const [isRecoveryMode, setIsRecoveryMode] = useState(false); // New state for audit trail
-
-  const { user: authUser } = useAuth();
-  const { toast } = useToast();
-  const [internalUser, setInternalUser] = useState<AuthAppUser | null>(authUser);
-
-  const resetApp = useCallback(() => {
-    setExamDataState(null);
-    setProductsState([]);
-    setCurrentStepState(ExamStep.WELCOME);
-    setEditingProductState(null);
-    setIsAddProductModalOpen(false);
-    setIsProductDetailModalOpen(false);
-    setProductToView(null);
-    setIsRecoveryMode(false); // Reset recovery mode
-  }, []);
-
-  useEffect(() => {
-    const authUserChanged = authUser?.uid !== internalUser?.uid || (authUser && !internalUser) || (!authUser && internalUser);
-    if (authUserChanged) {
-      resetApp();
-      setInternalUser(authUser);
-    }
-  }, [authUser, internalUser, resetApp]);
-
-  const logAuditEvent = useCallback(async (action: AuditLogEntry['action'], details: AuditLogEntry['details']) => {
-    if (!isRecoveryMode || !examData?.ne || !authUser?.email) return;
-
-    try {
-      const auditLogRef = collection(db, "examenesRecuperados");
-      const logEntry: Omit<AuditLogEntry, 'id'> = {
-        examNe: examData.ne,
-        action: action,
-        changedBy: authUser.email,
-        changedAt: Timestamp.fromDate(new Date()),
-        details: details
-      };
-      await addDoc(auditLogRef, logEntry);
-    } catch (error) {
-      console.error("Error writing audit log:", error);
-      toast({
-        title: "Error de Auditoría",
-        description: "No se pudo registrar el cambio en la bitácora de recuperación.",
-        variant: "destructive"
-      });
-    }
-  }, [isRecoveryMode, examData?.ne, authUser?.email, toast]);
-  
-  const softSaveExam = useCallback(async (currentExamData: ExamData | null, currentProducts: Product[]) => {
-      if (!currentExamData?.ne || !authUser?.email) {
-          console.log("Soft save prerequisites not met.", {ne: currentExamData?.ne, user: authUser?.email})
-          return; // Don't save if there's no NE or user
-      }
-  
-      const examDocRef = doc(db, "examenesPrevios", currentExamData.ne.toUpperCase());
-  
-      const dataToSave: Partial<ExamDocument> = {
-          ...currentExamData,
-          products: currentProducts,
-          savedBy: authUser.email,
-          status: 'incomplete', // Add a status field
-          lastUpdated: Timestamp.fromDate(new Date()),
-      };
-      
-      try {
-          // Check if it's the very first save to set createdAt
-          const docSnap = await getDoc(examDocRef);
-          if (!docSnap.exists()) {
-              dataToSave.createdAt = Timestamp.fromDate(new Date());
-          }
-          await setDoc(examDocRef, dataToSave, { merge: true }); // Merge to avoid overwriting with partial data
-          console.log(`Soft save successful for NE: ${currentExamData.ne}`);
-      } catch (error) {
-          console.error("Error during soft save:", error);
-          toast({
-              title: "Error de Autoguardado",
-              description: "No se pudo guardar el progreso. Revisa tu conexión.",
-              variant: "destructive"
-          });
-      }
-  }, [authUser, toast]);
-
-  const setExamData = useCallback((data: ExamData, isRecovery: boolean = false) => {
-    setExamDataState(data);
-    if (isRecovery) {
-      setIsRecoveryMode(true);
-    }
-  }, []);
-  
-  const setProducts = useCallback((products: Product[]) => {
-    setProductsState(products);
-  }, []);
-
-  const addProduct = useCallback((productData: Omit<Product, 'id'>) => {
-    const newProduct: Product = { ...productData, id: uuidv4() };
-    setProductsState((prevProducts) => {
-        const newProducts = [...prevProducts, newProduct];
-        softSaveExam(examData, newProducts);
-        return newProducts;
-    });
-    logAuditEvent('product_added', {
-        productId: newProduct.id,
-        newData: newProduct
-    });
-  }, [examData, softSaveExam, logAuditEvent]);
-
-  const updateProduct = useCallback((updatedProduct: Product) => {
-    let previousData: Product | undefined;
-    setProductsState((prevProducts) => {
-        previousData = prevProducts.find(p => p.id === updatedProduct.id);
-        const newProducts = prevProducts.map((p) => (p.id === updatedProduct.id ? updatedProduct : p));
-        softSaveExam(examData, newProducts);
-        return newProducts;
-    });
-    logAuditEvent('product_updated', {
-        productId: updatedProduct.id,
-        previousData: previousData,
-        newData: updatedProduct
-    });
-    setEditingProductState(null);
-  }, [examData, softSaveExam, logAuditEvent]);
-
-  const deleteProduct = useCallback((productId: string) => {
-    let deletedProduct: Product | undefined;
-    setProductsState((prevProducts) => {
-        deletedProduct = prevProducts.find(p => p.id === productId);
-        const newProducts = prevProducts.filter((p) => p.id !== productId);
-        softSaveExam(examData, newProducts);
-        return newProducts;
-    });
-     if (deletedProduct) {
-        logAuditEvent('product_deleted', {
-            productId: productId,
-            previousData: deletedProduct
-        });
-    }
-  }, [examData, softSaveExam, logAuditEvent]);
-
-  const setCurrentStep = useCallback((step: ExamStep) => {
-    setCurrentStepState(step);
-  }, []);
-  
-  const setEditingProduct = useCallback((product: Product | null) => {
-    setEditingProductState(product);
-  }, []);
-
-  const openAddProductModal = useCallback((productToEdit: Product | null = null) => {
-    setEditingProductState(productToEdit);
-    setIsAddProductModalOpen(true);
-  }, []);
-
-  const closeAddProductModal = useCallback(() => {
-    setIsAddProductModalOpen(false);
-    setEditingProductState(null);
-  }, []);
-
-  const openProductDetailModal = useCallback((product: Product) => {
-    setProductToView(product);
-    setIsProductDetailModalOpen(true);
-  }, []);
-
-  const closeProductDetailModal = useCallback(() => {
-    setIsProductDetailModalOpen(false);
-    setProductToView(null);
-  }, []);
-
-  return (
-    <AppContext.Provider
-      value={{
-        examData,
-        products,
-        currentStep,
-        editingProduct,
-        isAddProductModalOpen,
-        isProductDetailModalOpen,
-        productToView,
-        setExamData,
-        setProducts,
-        addProduct,
-        updateProduct,
-        deleteProduct,
-        setCurrentStep,
-        setEditingProduct,
-        openAddProductModal,
-        closeAddProductModal,
-        openProductDetailModal,
-        closeProductDetailModal,
-        resetApp,
-        softSaveExam,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
-  );
-};
-
-export const useAppContext = (): AppContextType => {
-  const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error('useAppContext must be used within an AppProvider');
-  }
-  return context;
-};
-
+  (Array.isArray(products) ? products : []).forEach((product, index) => {
+    content += `\n--- Producto ${index + 1} ---\n`;
+    content += `Número de Item: ${product.itemNumber || 'N/A'}\n`;
+    content += `Numeración de Bultos: ${product.numberPackages || 'N/A'}\n`;
+    content += `Cantidad de Bultos: ${product.quantityPackages || 0}\n`;
+    content += `Cantidad de Unidades: ${product.quantityUnits || 0}\n`;
+    content += `Descripción: ${product.description || 'N/A'}\n`;
+    content += `Marca: ${product.brand || 'N/A'}\n`;
+    content += `Modelo: ${product.model || 'N/A'}\n`;
+    content += `Serie: ${product.serial || 'N/A'}\n`;
+    content += `Origen: ${product.origin || 'N/A'}\n`;
+    content += `Estado de Mercancía: ${product.packagingCondition || 'N/A'}\n`;
+    content += `Unidad de Medida: ${product.unitMeasure || 'N/A'}\n`;
+    content += `Peso: ${product.weight || 'N/A'}\n`;
+    content += `Observación: ${product.observation || 'N/A'}\n`;
     
+    const statuses = [];
+    if (product.isConform) statuses.push("Conforme a factura");
+    if (product.isExcess) statuses.push("Se encontró excedente");
+    if (product.isMissing) statuses.push("Se encontró faltante");
+    if (product.isFault) statuses.push("Se encontró avería");
+    content += `Estado: ${statuses.length > 0 ? statuses.join(', ') : 'Sin estado específico'}\n`;
+  });
+
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `CustomsEX-p_${examData.ne}_${new Date().toISOString().split('T')[0]}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+export function downloadExcelFile(data: ExportableExamData) {
+  const now = new Date();
+  const fechaHoraExportacion = `${now.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'short' })}`;
+
+  const photoLinkUrl = `https://aconisani-my.sharepoint.com/my?id=%2Fpersonal%2Fasuntos%5Fjuridicos%5Faconic%5Fcom%5Fni%2FDocuments%2FExamenes%20Previos%20ACONIC%2F${encodeURIComponent(data.ne)}&ga=1`;
+
+  // --- Hoja 1: Detalles del Examen y Productos ---
+  const examDetailsSheetData: (string | number | Date | null | undefined | XLSX.CellObject)[][] = [
+    ['EXAMEN PREVIO AGENCIA ACONIC - CustomsEX-p'],
+    [],
+    ['INFORMACIÓN GENERAL DEL EXAMEN:'],
+    ['NE:', data.ne],
+    ['Referencia:', data.reference || 'N/A'],
+    ['Consignatario:', data.consignee],
+    ['Gestor del Examen:', data.manager],
+    ['Ubicación Mercancía:', data.location],
+    ['Fotos:', { v: 'Abrir Carpeta de Fotos', t: 's', l: { Target: photoLinkUrl, Tooltip: 'Ir a la carpeta de fotos en SharePoint' } }],
+    [],
+    ['PRODUCTOS:']
+  ];
+
+  const productHeaders = [
+    'Número de Item', 'Numeración de Bultos', 'Cantidad de Bultos', 'Cantidad de Unidades',
+    'Descripción', 'Marca', 'Modelo', 'Origen', 'Estado de Mercancía',
+    'Peso', 'Unidad de Medida', 'Serie', 'Observación', 'Estado'
+  ];
+  
+  const productRows = (Array.isArray(data.products) ? data.products : []).map(product => {
+    let statusText = '';
+    const statuses = [];
+    if (product.isConform) statuses.push("Conforme");
+    if (product.isExcess) statuses.push("Excedente");
+    if (product.isMissing) statuses.push("Faltante");
+    if (product.isFault) statuses.push("Avería");
+    statusText = statuses.length > 0 ? statuses.join('/') : 'S/E';
+
+    return [
+      product.itemNumber || 'N/A',
+      product.numberPackages || 'N/A',
+      product.quantityPackages || 0,
+      product.quantityUnits || 0,
+      product.description || 'N/A',
+      product.brand || 'N/A',
+      product.model || 'N/A',
+      product.origin || 'N/A',
+      product.packagingCondition || 'N/A',
+      product.weight || 'N/A',
+      product.unitMeasure || 'N/A',
+      product.serial || 'N/A',
+      product.observation || 'N/A',
+      statusText
+    ];
+  });
+
+  const ws_exam_details_data = [...examDetailsSheetData, productHeaders, ...productRows];
+  const ws_exam_details = XLSX.utils.aoa_to_sheet(ws_exam_details_data);
+
+  // Ajustar anchos de columna para la hoja de detalles del examen
+  const examColWidths = productHeaders.map((header, i) => ({
+    wch: Math.max(
+      header.length,
+      ...(ws_exam_details_data.slice(examDetailsSheetData.length) as string[][]).map(row => row[i] ? String(row[i]).length : 0)
+    ) + 2 
+  }));
+  
+  const generalInfoLabels = examDetailsSheetData.slice(0, examDetailsSheetData.length - 2).map(row => String(row[0] || ''));
+  const generalInfoValues = examDetailsSheetData.slice(0, examDetailsSheetData.length - 2).map(row => {
+    const cellValue = row[1];
+    if (typeof cellValue === 'object' && cellValue !== null && 'v' in cellValue) {
+      return String((cellValue as XLSX.CellObject).v || '');
+    }
+    return String(cellValue || '');
+  });
+
+  if (examColWidths.length > 0) {
+    examColWidths[0].wch = Math.max(examColWidths[0]?.wch || 0, ...generalInfoLabels.map(label => label.length + 2));
+  }
+  if (examColWidths.length > 1) {
+    examColWidths[1].wch = Math.max(examColWidths[1]?.wch || 0, ...generalInfoValues.map(value => value.length + 5));
+  }
+  ws_exam_details['!cols'] = examColWidths;
+
+  // --- Hoja 2: Detalles del Sistema ---
+  const systemDetailsSheetData: (string | number | Date | null | undefined)[][] = [
+    ['DETALLES DE SISTEMA DEL EXAMEN:']
+  ];
+
+  if (data.savedBy) {
+    systemDetailsSheetData.push(['Guardado por (correo):', data.savedBy]);
+  } else {
+    systemDetailsSheetData.push(['Guardado por (correo):', 'N/A (No guardado en BD aún o dato no disponible)']);
+  }
+
+  if (data.createdAt) {
+    const createdAtDate = data.createdAt instanceof Date ? data.createdAt : (data.createdAt as Timestamp).toDate();
+    systemDetailsSheetData.push(['Fecha y Hora de Inicio:', createdAtDate.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' })]);
+  } else {
+     systemDetailsSheetData.push(['Fecha y Hora de Inicio:', 'N/A']);
+  }
+  
+  if (data.completedAt) {
+    const completedAtDate = data.completedAt instanceof Date ? data.completedAt : (data.completedAt as Timestamp).toDate();
+    systemDetailsSheetData.push(['Fecha y Hora de Finalización:', completedAtDate.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' })]);
+  } else {
+     systemDetailsSheetData.push(['Fecha y Hora de Finalización:', 'Examen no finalizado']);
+  }
+  
+  systemDetailsSheetData.push(['Fecha y Hora de Exportación:', fechaHoraExportacion]);
+
+  const ws_system_details = XLSX.utils.aoa_to_sheet(systemDetailsSheetData);
+  
+  // Ajustar anchos de columna para la hoja de detalles del sistema
+  const systemColWidths = [
+    { wch: Math.max(...systemDetailsSheetData.map(row => String(row[0]).length)) + 2 },
+    { wch: Math.max(...systemDetailsSheetData.map(row => String(row[1]).length)) + 5 },
+  ];
+  ws_system_details['!cols'] = systemColWidths;
+
+
+  // --- Crear y descargar el libro ---
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws_exam_details, `Examen ${data.ne}`);
+  XLSX.utils.book_append_sheet(wb, ws_system_details, "Detalle de Sistema");
+  
+  XLSX.writeFile(wb, `CustomsEX-p_${data.ne}_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+export function downloadReportAsExcel(exams: ExamDocument[]) {
+  const now = new Date();
+  const fechaHoraExportacion = `${now.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'short' })}`;
+  
+  const formatTimestamp = (ts: Timestamp | undefined | null): string => {
+    if (!ts) return 'N/A';
+    // Handle both old and new exam structures
+    const date = (ts as Timestamp)?.toDate ? (ts as Timestamp).toDate() : (ts as any);
+    if (date instanceof Date) {
+        return date.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'short' });
+    }
+    return 'Fecha inválida';
+  };
+
+  const reportHeaders = [
+    'NE',
+    'Consignatario',
+    'Solicitado Por',
+    'Asignado a',
+    'Inicio de Previo',
+    'Fin de Previo',
+    'Cantidad de Productos',
+    'Guardado Por'
+  ];
+
+  const reportRows = exams.map(exam => [
+    exam.ne,
+    exam.consignee,
+    exam.requestedBy || 'N/A', // Handle old exams
+    exam.assignedTo || exam.manager, // Handle old exams
+    formatTimestamp(exam.createdAt || exam.lastUpdated), // Handle old exams
+    formatTimestamp(exam.completedAt || exam.lastUpdated), // Handle old exams
+    exam.products?.length || 0,
+    exam.savedBy || 'N/A'
+  ]);
+
+  const ws_data = [
+    ['REPORTE DE EXÁMENES PREVIOS - CustomsEX-p'],
+    [`Generado el: ${fechaHoraExportacion}`],
+    [],
+    reportHeaders,
+    ...reportRows
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+  // Ajustar anchos de columna
+  const colWidths = reportHeaders.map((header, i) => ({
+    wch: Math.max(
+      header.length,
+      ...reportRows.map(row => String(row[i]).length)
+    ) + 2
+  }));
+  ws['!cols'] = colWidths;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Reporte de Exámenes");
+
+  XLSX.writeFile(wb, `Reporte_CustomsEX-p_${now.toISOString().split('T')[0]}.xlsx`);
+}
