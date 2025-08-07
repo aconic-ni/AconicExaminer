@@ -2,7 +2,7 @@
 "use client";
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
-import { FileText, LogOut, UserCircle, Camera, FileSpreadsheet } from 'lucide-react';
+import { FileText, LogOut, UserCircle, Camera, FileSpreadsheet, ListTodo } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 
@@ -40,15 +40,20 @@ export function AppHeader() {
                 <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
                   {(user.roleTitle || user.role) && <Badge variant="secondary">{user.roleTitle || user.role}</Badge>}
                   <UserCircle className="h-5 w-5" />
-                  <span>{user.isStaticUser ? user.displayName : user.email}</span>
+                  <span>{user.email}</span>
                 </div>
-                {(user.isStaticUser || user.role === 'aforador') && (
-                   <Button asChild variant="ghost" size="icon" className="text-primary hover:bg-chart-4 hover:text-primary-foreground transition-all duration-300">
-                     <Link href="/reports" aria-label="Ir a la página de reportes">
-                       <FileSpreadsheet className="h-5 w-5" />
+                 {user.role === 'coordinadora' && (
+                   <Button asChild variant="ghost" size="icon" className="text-primary hover:bg-chart-3 hover:text-primary-foreground transition-all duration-300">
+                     <Link href="/assignments" aria-label="Ir al panel de asignaciones">
+                       <ListTodo className="h-5 w-5" />
                      </Link>
                    </Button>
                 )}
+                 <Button asChild variant="ghost" size="icon" className="text-primary hover:bg-chart-4 hover:text-primary-foreground transition-all duration-300">
+                   <Link href="/reports" aria-label="Ir a la página de reportes">
+                     <FileSpreadsheet className="h-5 w-5" />
+                   </Link>
+                 </Button>
                 <Button asChild variant="ghost" size="icon" className="text-primary hover:bg-chart-2 hover:text-primary-foreground transition-all duration-300">
                   <a
                     href="https://aconisani-my.sharepoint.com/:f:/g/personal/asuntos_juridicos_aconic_com_ni/Emrpj4Ss8bhDifpuYc8U_bwBj9r29FGcXxzfxu4PSh2tEQ?e=tkoEC0"
