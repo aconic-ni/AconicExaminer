@@ -1,7 +1,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'gestor' | 'aforador';
+export type UserRole = 'gestor' | 'aforador' | 'ejecutivo' | 'coordinadora';
 
 export interface ExamData {
   ne: string;
@@ -37,19 +37,24 @@ export interface AppUser {
   uid: string;
   email: string | null;
   displayName?: string | null;
-  isStaticUser?: boolean; // Flag for the static user
   role?: UserRole | null;
   roleTitle?: string | null; // Custom title for display purposes
+  isStaticUser?: boolean;
 }
 
 export interface ExamDocument extends ExamData {
   id?: string; // Add optional id for mapping in reports
   products: Product[];
-  savedAt: Timestamp; // Firestore Timestamp for when it was saved
   savedBy: string | null; // Email of the user who saved it
-  status?: 'incomplete' | 'complete'; // To track exam status
-  lastUpdated?: Timestamp; // To track last soft save
+  status?: 'incomplete' | 'complete' | 'requested' | 'assigned'; // To track exam status
+  createdAt?: Timestamp | null; // When the exam was first created
+  lastUpdated?: Timestamp | null; // To track last soft save
+  completedAt?: Timestamp | null; // When the exam was finalized
   commentCount?: number; // For report comment counts
+  requestedBy?: string | null; // email of executive
+  requestedAt?: Timestamp | null;
+  assignedTo?: string | null; // name of gestor
+  assignedAt?: Timestamp | null;
 }
 
 export interface Comment {
@@ -66,7 +71,8 @@ export interface Comment {
 // It accommodates both PreviewScreen (without savedAt/savedBy) and DatabasePage (with them)
 export interface ExportableExamData extends ExamData {
   products?: Product[] | null;
-  savedAt?: Timestamp | Date | null; // Allow null for consistency if field might be absent
+  createdAt?: Timestamp | Date | null;
+  completedAt?: Timestamp | Date | null;
   savedBy?: string | null;
 }
 
@@ -81,4 +87,18 @@ export interface AuditLogEntry {
         newData?: Partial<Product> | null;
         [key: string]: any;
     };
+}
+
+
+export interface ExamRequest {
+    id: string;
+    ne: string;
+    reference?: string | null;
+    consignee: string;
+    location: string;
+    status: 'pendiente' | 'asignado' | 'completado';
+    requestedBy: string; // email of executive
+    requestedAt: Timestamp;
+    assignedTo?: string; // name of gestor
+    assignedAt?: Timestamp;
 }
