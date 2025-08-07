@@ -2,7 +2,7 @@
 "use client";
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
-import { FileText, LogOut, UserCircle, Camera, FileSpreadsheet, ListTodo } from 'lucide-react';
+import { FileText, LogOut, UserCircle, Camera, FileSpreadsheet, ListTodo, Database, Home } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 
@@ -52,6 +52,16 @@ export function AppHeader() {
                  <Button asChild variant="ghost" size="icon" className="text-primary hover:bg-chart-4 hover:text-primary-foreground transition-all duration-300">
                    <Link href="/reports" aria-label="Ir a la página de reportes">
                      <FileSpreadsheet className="h-5 w-5" />
+                   </Link>
+                 </Button>
+                 <Button asChild variant="ghost" size="icon" className="text-primary hover:bg-chart-1 hover:text-primary-foreground transition-all duration-300">
+                   <Link href="/database" aria-label="Ir a la base de datos">
+                     <Database className="h-5 w-5" />
+                   </Link>
+                 </Button>
+                 <Button asChild variant="ghost" size="icon" className="text-primary hover:bg-chart-5 hover:text-primary-foreground transition-all duration-300">
+                   <Link href="/" aria-label="Ir al inicio">
+                     <Home className="h-5 w-5" />
                    </Link>
                  </Button>
                 <Button asChild variant="ghost" size="icon" className="text-primary hover:bg-chart-2 hover:text-primary-foreground transition-all duration-300">
