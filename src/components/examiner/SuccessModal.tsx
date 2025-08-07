@@ -63,17 +63,16 @@ export function SuccessModal() {
         return productCopy;
       });
   
-      const dataToSave: Omit<ExamDocument, 'id'> = {
+      const dataToSave: Partial<ExamDocument> = {
         ...examData,
-        reference: examData.reference ?? null,
         products: productsForDb,
-        savedAt: Timestamp.fromDate(new Date()),
         savedBy: user.email,
         status: 'complete', // Mark as complete
         lastUpdated: Timestamp.fromDate(new Date()),
+        completedAt: Timestamp.fromDate(new Date()), // Set completion timestamp
       };
   
-      await setDoc(examDocRef, dataToSave);
+      await setDoc(examDocRef, dataToSave, { merge: true });
       toast({
         title: "Examen Finalizado y Guardado",
         description: `El examen NE: ${examData.ne} ha sido guardado en la base de datos.`,
