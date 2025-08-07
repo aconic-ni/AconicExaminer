@@ -9,27 +9,21 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { X, Mail, Lock } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext'; // Import useAuth
-import type { AppUser } from '@/types';
+import { X, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: (isStaticUser?: boolean) => void; // Modified to indicate static user
+  onLoginSuccess: () => void;
 }
-
-// Static credentials
-const STATIC_USER_EMAIL = "ejecutivos@aconic.com.ni";
-const STATIC_USER_PASS = "test123";
 
 export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { setStaticUser } = useAuth(); // Get setStaticUser from AuthContext
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -41,28 +35,11 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
       setLoading(false);
       return;
     }
-
-    // Check for static user credentials
-    if (email === STATIC_USER_EMAIL && password === STATIC_USER_PASS) {
-      const staticUser: AppUser = {
-        uid: 'static_user_uid', // Provide a mock UID
-        email: STATIC_USER_EMAIL,
-        displayName: 'Usuario Ejecutivo',
-        isStaticUser: true,
-      };
-      setStaticUser(staticUser); // Set static user in context
-      toast({ title: 'Inicio de sesión de ejecutivo exitoso', description: 'Bienvenido.' });
-      onLoginSuccess(true); // Pass true to indicate static user
-      onClose();
-      setLoading(false);
-      return;
-    }
     
     try {
       await signInWithEmailAndPassword(auth as Auth, email, password);
-      setStaticUser(null); // Ensure no static user is set if Firebase login succeeds
       toast({ title: 'Inicio de sesión exitoso', description: 'Bienvenido a CustomsEX-p.' });
-      onLoginSuccess(false); // Pass false for Firebase user
+      onLoginSuccess();
       onClose();
     } catch (err: any) {
       console.error("Firebase Auth Error:", err);
@@ -118,23 +95,27 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
               <Lock className="mr-2 h-4 w-4 text-primary" />
               Contraseña
             </Label>
-            <Input
-              id="password-login"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-3 text-foreground placeholder:text-muted-foreground border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="********"
-            />
+            <div className="relative">
+                <Input
+                id="password-login"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full px-4 py-3 pr-10 text-foreground placeholder:text-muted-foreground border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="********"
+                />
+                <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+            </div>
           </div>
            {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="text-xs text-muted-foreground">
-            Para solicitar acceso, contacte a Coordinación ACONIC: <br />
-            <Link href="https://wa.me/+50583956505" target="_blank" className="text-primary hover:text-primary/80 underline">
-              WhatsApp (+505 8395 6505)
-            </Link>
-          </div>
           <DialogFooter>
             <Button type="submit" className="btn-primary text-primary-foreground px-8 py-3 rounded-md font-medium w-full" disabled={loading}>
               {loading ? 'Ingresando...' : 'Ingresar'}
