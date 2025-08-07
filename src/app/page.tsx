@@ -14,12 +14,16 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!loading && user) {
-        // User is logged in, redirect them based on their role/type.
-        let targetPath = '/examiner'; // Default for 'gestor'
-        if (user.isStaticUser || user.role === 'aforador') {
-          targetPath = '/database';
-        }
-        router.push(targetPath);
+      // User is logged in, redirect them based on their role/type.
+      let targetPath = '/examiner'; // Default for 'gestor'
+      if (user.role === 'aforador') {
+        targetPath = '/database';
+      } else if (user.role === 'ejecutivo') {
+        targetPath = '/executive';
+      } else if (user.role === 'coordinadora') {
+        targetPath = '/assignments';
+      }
+      router.push(targetPath);
     }
     // If no user and not loading, stay on this page to show the login button.
   }, [user, loading, router]);
