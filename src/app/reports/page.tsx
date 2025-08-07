@@ -16,6 +16,7 @@ import type { ExamDocument } from '@/types';
 import type { DateRange } from 'react-day-picker';
 import { downloadReportAsExcel } from '@/lib/fileExporter';
 import { FetchedExamDetails } from '@/components/database/FetchedExamDetails';
+import { Badge } from '@/components/ui/badge';
 
 type SearchMode = 'range' | 'specific';
 
@@ -33,8 +34,8 @@ export default function ReportsPage() {
   const [selectedExam, setSelectedExam] = useState<ExamDocument | null>(null);
 
   useEffect(() => {
-    if (!authLoading && (!user || (!user.isStaticUser && user.role !== 'aforador'))) {
-      router.push('/');
+    if (!authLoading && !user) {
+        router.push('/');
     }
   }, [user, authLoading, router]);
 
@@ -50,8 +51,8 @@ export default function ReportsPage() {
       
       const q = query(
         collection(db, "examenesPrevios"),
-        where("savedAt", ">=", startTimestamp),
-        where("savedAt", "<=", endTimestamp)
+        where("lastUpdated", ">=", startTimestamp),
+        where("lastUpdated", "<=", endTimestamp)
       );
 
       const querySnapshot = await getDocs(q);
@@ -59,19 +60,19 @@ export default function ReportsPage() {
       const examPromises = querySnapshot.docs.map(async (docSnapshot) => {
         const examData = { id: docSnapshot.id, ...docSnapshot.data() } as ExamDocument;
         
-        // Fetch comment count for each exam
         const commentsRef = collection(db, "examenesPrevios", docSnapshot.id, "comments");
         const commentsSnapshot = await getDocs(commentsRef);
         
         return {
           ...examData,
-          commentCount: commentsSnapshot.size, // Add commentCount to the object
+          commentCount: commentsSnapshot.size,
         };
       });
 
       const fetchedExamsWithCounts = await Promise.all(examPromises);
       
-      fetchedExamsWithCounts.sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis());
+      fetchedExamsWithCounts.sort((a, b) => (b.lastUpdated?.toMillis() ?? 0) - (a.lastUpdated?.toMillis() ?? 0));
+
 
       setExams(fetchedExamsWithCounts);
       if (fetchedExamsWithCounts.length === 0) {
@@ -115,7 +116,6 @@ export default function ReportsPage() {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
     
-    // Clear other pickers
     setDateRange(undefined);
     setSpecificDate(undefined);
     
@@ -137,8 +137,14 @@ export default function ReportsPage() {
   const handleCloseDetails = () => {
     setSelectedExam(null);
   };
+  
+  const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
+    if (!timestamp) return 'N/A';
+    return timestamp.toDate().toLocaleString('es-NI', { dateStyle: 'medium', timeStyle: 'short' });
+  };
 
-  if (authLoading || !user || (!user.isStaticUser && user.role !== 'aforador')) {
+
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -162,11 +168,11 @@ export default function ReportsPage() {
   return (
     <AppShell>
       <div className="py-2 md:py-5">
-        <Card className="w-full max-w-6xl mx-auto custom-shadow">
+        <Card className="w-full max-w-7xl mx-auto custom-shadow">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-foreground">Reportes de Exámenes Previos</CardTitle>
             <CardDescription className="text-muted-foreground">
-              Filtre los exámenes por rango de fechas, fecha específica o consulte los de hoy.
+              Filtre los exámenes por rango de fechas, fecha específica o consulte los de hoy. La búsqueda se basa en la última actualización del examen.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -217,8 +223,11 @@ export default function ReportsPage() {
                     <TableRow>
                       <TableHead>NE</TableHead>
                       <TableHead>Consignatario</TableHead>
-                      <TableHead>Gestor</TableHead>
-                      <TableHead>Fecha de Guardado</TableHead>
+                      <TableHead>Solicitado Por</TableHead>
+                      <TableHead>Fecha Asignación</TableHead>
+                      <TableHead>Asignado a</TableHead>
+                      <TableHead>Inicio de Previo</TableHead>
+                      <TableHead>Fin de Previo</TableHead>
                       <TableHead className="text-center">Productos</TableHead>
                       <TableHead className="text-center">Bitácora</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
@@ -229,8 +238,15 @@ export default function ReportsPage() {
                       <TableRow key={exam.id}>
                         <TableCell className="font-medium">{exam.ne}</TableCell>
                         <TableCell>{exam.consignee}</TableCell>
-                        <TableCell>{exam.manager}</TableCell>
-                        <TableCell>{exam.savedAt.toDate().toLocaleString('es-NI', { dateStyle: 'medium', timeStyle: 'short' })}</TableCell>
+                        <TableCell>
+                          {exam.requestedBy ? <Badge variant="outline">{exam.requestedBy}</Badge> : 'N/A'}
+                        </TableCell>
+                        <TableCell>{formatTimestamp(exam.assignedAt)}</TableCell>
+                        <TableCell>
+                           {exam.assignedTo ? <Badge variant="secondary">{exam.assignedTo}</Badge> : 'N/A'}
+                        </TableCell>
+                        <TableCell>{formatTimestamp(exam.createdAt)}</TableCell>
+                        <TableCell>{formatTimestamp(exam.completedAt)}</TableCell>
                         <TableCell className="text-center">{exam.products?.length || 0}</TableCell>
                         <TableCell className="text-center">
                             <div className="flex items-center justify-center">
@@ -260,3 +276,4 @@ export default function ReportsPage() {
     </AppShell>
   );
 }
+
