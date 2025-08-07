@@ -12,9 +12,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      if (user.isStaticUser || user.role === 'aforador') {
+      if (user.role === 'aforador') {
         router.push('/database');
-      } else {
+      } else if (user.role === 'ejecutivo') {
+        router.push('/executive');
+      } else if (user.role === 'coordinadora') {
+        router.push('/assignments');
+      } else { // gestor and others
         router.push('/examiner');
       }
     }
@@ -39,4 +43,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
