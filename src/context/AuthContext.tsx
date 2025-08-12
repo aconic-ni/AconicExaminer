@@ -58,9 +58,15 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         displayName: null,
-        role: null, // No role yet
+        role: 'gestor', // Assign default role for new users
         roleTitle: null,
       });
+       // New user, create their document with default role
+      await setDoc(userDocRef, { 
+        email: firebaseUser.email,
+        role: 'gestor',
+        createdAt: serverTimestamp()
+      }, { merge: true });
       setIsProfileComplete(false);
     }
   }, []);
