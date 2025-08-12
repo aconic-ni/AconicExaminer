@@ -65,14 +65,16 @@ export function ExaminerWelcome() {
   
   const handleStartAssigned = async (exam: ExamDocument) => {
     setIsLoading(true);
-    // 1. Update the document to set the `createdAt` timestamp (start of exam work)
     try {
         const examDocRef = doc(db, "examenesPrevios", exam.ne.toUpperCase());
+        // Lock the exam before starting
         await updateDoc(examDocRef, {
-            createdAt: serverTimestamp()
+            lock: 'on',
+            createdAt: serverTimestamp(), // Marks the start of the practical work
+            savedAt: serverTimestamp() // Also update savedAt on start
         });
         
-        // 2. Load data into context
+        // Load data into context
         setExamData({
             ne: exam.ne,
             reference: exam.reference,
@@ -87,7 +89,6 @@ export function ExaminerWelcome() {
           description: `Comenzando trabajo en el examen ${exam.ne}.`,
         });
     
-        // 3. Move to the product list step
         setCurrentStep(ExamStep.PRODUCT_LIST);
 
     } catch (err) {
@@ -112,14 +113,30 @@ export function ExaminerWelcome() {
 
       if (docSnap.exists()) {
         const recoveredExam = docSnap.data() as ExamDocument;
+
+        // Check lock and completion status before recovering. Block if ANY condition is met.
+        if (recoveredExam.lock === 'on' || !!recoveredExam.completedAt || recoveredExam.status === 'complete') {
+            const errorMessage = "Este previo ya se encuentra finalizado o está en uso. Intenta con otro NE o contacta al gestor asignado.";
+            setError(errorMessage);
+            toast({ 
+                title: "Recuperación No Permitida", 
+                description: errorMessage,
+                variant: "destructive" 
+            });
+            setIsLoading(false);
+            return;
+        }
         
+        // If checks pass, lock the exam and proceed
+        await updateDoc(examDocRef, { lock: 'on', savedAt: serverTimestamp() });
+
         setExamData({
             ne: recoveredExam.ne,
             reference: recoveredExam.reference,
             consignee: recoveredExam.consignee,
             location: recoveredExam.location,
             manager: recoveredExam.manager
-        }, true);
+        }, true); // isRecovery = true
         setProducts(recoveredExam.products || []);
 
         toast({
@@ -165,10 +182,6 @@ export function ExaminerWelcome() {
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-             <Button onClick={handleStartNew} size="lg" className="h-20 text-lg btn-primary">
-              <FilePlus className="mr-3 h-6 w-6" />
-              Empezar Examen Nuevo
-            </Button>
             <Button onClick={() => setIsRecovering(!isRecovering)} size="lg" variant="outline" className="h-20 text-lg">
               <RefreshCw className="mr-3 h-6 w-6" />
               {isRecovering ? 'Ocultar Recuperación' : 'Continuar/Recuperar Examen'}
@@ -226,9 +239,8 @@ export function ExaminerWelcome() {
                                     Asignado por {exam.requestedBy} el {formatTimestamp(exam.assignedAt)}
                                 </p>
                             </div>
-                            <Button size="sm" onClick={() => handleStartAssigned(exam)} disabled={isLoading}>
-                                <PlayCircle className="mr-2 h-4 w-4"/>
-                                Empezar Previo
+                            <Button size="sm" onClick={() => handleStartAssigned(exam)} disabled={isLoading || exam.lock === 'on'}>
+                                {exam.lock === 'on' ? 'En uso' : <><PlayCircle className="mr-2 h-4 w-4"/> Empezar Previo</>}
                             </Button>
                         </div>
                     ))}
@@ -240,4 +252,3 @@ export function ExaminerWelcome() {
     </div>
   );
 }
-
