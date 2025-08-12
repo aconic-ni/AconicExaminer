@@ -142,21 +142,20 @@ export function downloadExcelFile(data: ExportableExamData) {
     systemDetailsSheetData.push(['Guardado por (correo):', 'N/A (No guardado en BD aún o dato no disponible)']);
   }
 
-  if (data.createdAt) {
-    const createdAtDate = data.createdAt instanceof Date ? data.createdAt : (data.createdAt as Timestamp).toDate();
-    systemDetailsSheetData.push(['Fecha y Hora de Inicio:', createdAtDate.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' })]);
-  } else {
-     systemDetailsSheetData.push(['Fecha y Hora de Inicio:', 'N/A']);
+  const toLocaleStringSafe = (timestamp: Timestamp | Date | null | undefined) => {
+    if (!timestamp) return 'N/A';
+    const date = (timestamp as Timestamp)?.toDate ? (timestamp as Timestamp).toDate() : (timestamp as Date);
+    if (date instanceof Date) {
+      return date.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' });
+    }
+    return 'Fecha inválida';
   }
-  
-  if (data.completedAt) {
-    const completedAtDate = data.completedAt instanceof Date ? data.completedAt : (data.completedAt as Timestamp).toDate();
-    systemDetailsSheetData.push(['Fecha y Hora de Finalización:', completedAtDate.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' })]);
-  } else {
-     systemDetailsSheetData.push(['Fecha y Hora de Finalización:', 'Examen no finalizado']);
-  }
-  
+
+  systemDetailsSheetData.push(['Fecha y Hora de Inicio:', toLocaleStringSafe(data.createdAt)]);
+  systemDetailsSheetData.push(['Fecha y Hora de Último Guardado:', toLocaleStringSafe(data.savedAt)]);
+  systemDetailsSheetData.push(['Fecha y Hora de Finalización:', data.completedAt ? toLocaleStringSafe(data.completedAt) : 'Examen no finalizado']);
   systemDetailsSheetData.push(['Fecha y Hora de Exportación:', fechaHoraExportacion]);
+
 
   const ws_system_details = XLSX.utils.aoa_to_sheet(systemDetailsSheetData);
   
