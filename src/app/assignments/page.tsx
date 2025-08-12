@@ -102,6 +102,7 @@ export default function AssignmentsPage() {
         products: [],
         savedBy: user?.email || 'N/A', // Log who assigned it as initial save
         status: 'incomplete',
+        lock: 'off', // Initial lock state is off, allowing recovery
         createdAt: serverTimestamp(),
         lastUpdated: serverTimestamp(),
         completedAt: null,
