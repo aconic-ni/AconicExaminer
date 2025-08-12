@@ -38,6 +38,8 @@ export function RequestForm() {
       location: '',
     },
   });
+  
+  const backLink = user?.role === 'coordinadora' ? '/assignments' : '/executive';
 
   async function onSubmit(data: RequestFormData) {
     if (!user || !user.email) {
@@ -66,7 +68,7 @@ export function RequestForm() {
         description: `La solicitud para el examen NE: ${data.ne} ha sido creada exitosamente.`,
       });
 
-      router.push('/executive');
+      router.push(backLink);
     } catch (error) {
       toast({
         title: "Error al Enviar",
@@ -142,7 +144,7 @@ export function RequestForm() {
             </div>
             <div className="flex justify-between items-center pt-4">
                <Button type="button" variant="ghost" asChild>
-                  <Link href="/executive">
+                  <Link href={backLink}>
                     <ArrowLeft className="mr-2 h-4 w-4" /> Volver
                   </Link>
                 </Button>
