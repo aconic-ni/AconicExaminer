@@ -13,7 +13,7 @@ export function AppShell({ children }: AppShellProps) {
         {children}
       </main>
       <footer className="py-4 text-center text-sm bg-card text-card-foreground border-t">
-        Stvaer © {new Date().getFullYear()} <em className="italic">for</em> ACONIC.
+        Stvaer © 2025 <em>for</em> ACONIC
       </footer>
     </div>
   );
