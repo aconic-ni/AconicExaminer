@@ -69,7 +69,7 @@ export function ExaminerWelcome() {
         const examDocRef = doc(db, "examenesPrevios", exam.ne.toUpperCase());
         // Lock the exam before starting
         await updateDoc(examDocRef, {
-            lock: 'on',
+            // lock: 'on', // lock is handled on completion now
             createdAt: serverTimestamp(), // Marks the start of the practical work
             savedAt: serverTimestamp() // Also update savedAt on start
         });
@@ -114,9 +114,9 @@ export function ExaminerWelcome() {
       if (docSnap.exists()) {
         const recoveredExam = docSnap.data() as ExamDocument;
 
-        // Check lock and completion status before recovering. Block if ANY condition is met.
-        if (recoveredExam.lock === 'on' || !!recoveredExam.completedAt || recoveredExam.status === 'complete') {
-            const errorMessage = "Este previo ya se encuentra finalizado o está en uso. Intenta con otro NE o contacta al gestor asignado.";
+        // An exam cannot be recovered if it's locked (on) or already has a completion date
+        if (recoveredExam.lock === 'on' || !!recoveredExam.completedAt) {
+            const errorMessage = "Este previo ya se encuentra finalizado, no se puede recuperar.";
             setError(errorMessage);
             toast({ 
                 title: "Recuperación No Permitida", 
@@ -127,9 +127,7 @@ export function ExaminerWelcome() {
             return;
         }
         
-        // If checks pass, lock the exam and proceed
-        await updateDoc(examDocRef, { lock: 'on', savedAt: serverTimestamp() });
-
+        // If checks pass, proceed to load data. No need to change lock status here.
         setExamData({
             ne: recoveredExam.ne,
             reference: recoveredExam.reference,
@@ -240,7 +238,7 @@ export function ExaminerWelcome() {
                                 </p>
                             </div>
                             <Button size="sm" onClick={() => handleStartAssigned(exam)} disabled={isLoading || exam.lock === 'on'}>
-                                {exam.lock === 'on' ? 'En uso' : <><PlayCircle className="mr-2 h-4 w-4"/> Empezar Previo</>}
+                                {exam.lock === 'on' ? 'Finalizado' : <><PlayCircle className="mr-2 h-4 w-4"/> Empezar Previo</>}
                             </Button>
                         </div>
                     ))}
