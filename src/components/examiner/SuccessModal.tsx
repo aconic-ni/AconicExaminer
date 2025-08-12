@@ -70,7 +70,7 @@ export function SuccessModal() {
         products: productsForDb,
         savedBy: user.email,
         status: 'complete', // Mark as complete
-        lock: 'off', // Unlock the document
+        lock: 'on', // Lock the document to prevent future recovery
         lastUpdated: Timestamp.fromDate(new Date()),
         savedAt: Timestamp.fromDate(new Date()),
         completedAt: Timestamp.fromDate(new Date()), // Set completion timestamp
@@ -167,4 +167,3 @@ export function SuccessModal() {
     </Dialog>
   );
 }
-
