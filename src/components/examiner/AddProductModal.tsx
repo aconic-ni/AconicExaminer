@@ -30,7 +30,9 @@ import {
   ShieldCheck,
   MessageSquare
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
+const RequiredIndicator = () => <span className="text-destructive ml-1">*</span>;
 
 export function AddProductModal() {
   const {
@@ -163,7 +165,7 @@ export function AddProductModal() {
               <div className="md:col-span-2">
                 <FormField control={form.control} name="description" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Descripción</FormLabel>
+                    <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" />Descripción<RequiredIndicator /></FormLabel>
                     <FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl><FormMessage />
                   </FormItem>
                 )}/>
@@ -200,19 +202,19 @@ export function AddProductModal() {
               )}/>
               <FormField control={form.control} name="numberPackages" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center"><Barcode className="mr-2 h-4 w-4 text-primary" />Numeración de Bultos</FormLabel>
+                  <FormLabel className="flex items-center"><Barcode className="mr-2 h-4 w-4 text-primary" />Numeración de Bultos<RequiredIndicator /></FormLabel>
                   <FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage />
                 </FormItem>
               )}/>
               <FormField control={form.control} name="quantityPackages" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-primary" />Cantidad de Bultos</FormLabel>
+                  <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-primary" />Cantidad de Bultos<RequiredIndicator /></FormLabel>
                   <FormControl><Input type="number" min="0" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} /></FormControl><FormMessage />
                 </FormItem>
               )}/>
               <FormField control={form.control} name="quantityUnits" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center"><Box className="mr-2 h-4 w-4 text-primary" />Cantidad de Unidades</FormLabel>
+                  <FormLabel className="flex items-center"><Box className="mr-2 h-4 w-4 text-primary" />Cantidad de Unidades<RequiredIndicator /></FormLabel>
                   <FormControl><Input type="number" min="0" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''}/></FormControl><FormMessage />
                 </FormItem>
               )}/>
@@ -259,4 +261,3 @@ export function AddProductModal() {
     </Dialog>
   );
 }
-
