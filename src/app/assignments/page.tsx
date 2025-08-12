@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { AppShell } from '@/components/layout/AppShell';
-import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Loader2, CheckCircle, AlertTriangle, FilePlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,6 +14,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, writeBatch, doc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import type { AppUser, ExamRequest, ExamDocument } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 
 export default function AssignmentsPage() {
@@ -38,7 +39,7 @@ export default function AssignmentsPage() {
       pendingRequests.sort((a,b) => (a.requestedAt?.toMillis() ?? 0) - (b.requestedAt?.toMillis() ?? 0));
       setRequests(pendingRequests);
 
-      // Fetch available gestores
+      // Fetch available gestores 
       const gestoresQuery = query(collection(db, "users"), where("role", "==", "gestor"));
       const gestoresSnapshot = await getDocs(gestoresQuery);
       const availableGestores = gestoresSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser));
@@ -147,8 +148,18 @@ export default function AssignmentsPage() {
       <div className="py-2 md:py-5">
         <Card className="w-full max-w-6xl mx-auto custom-shadow">
           <CardHeader>
-            <CardTitle className="text-2xl font-semibold">Panel de Asignaciones</CardTitle>
-            <CardDescription>Asigne exámenes previos solicitados a los gestores disponibles.</CardDescription>
+            <div className="flex justify-between items-start">
+                <div>
+                    <CardTitle className="text-2xl font-semibold">Panel de Asignaciones</CardTitle>
+                    <CardDescription>Asigne exámenes previos solicitados a los gestores disponibles.</CardDescription>
+                </div>
+                <Button asChild>
+                    <Link href="/executive/request">
+                        <FilePlus className="mr-2 h-4 w-4" />
+                        Solicitar Previo
+                    </Link>
+                </Button>
+            </div>
           </CardHeader>
           <CardContent>
              {error && (
@@ -192,7 +203,9 @@ export default function AssignmentsPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         {gestores.map(g => (
-                                            <SelectItem key={g.uid} value={g.uid}>{g.displayName || g.email}</SelectItem>
+                                            <SelectItem key={g.uid} value={g.uid}>
+                                                {g.displayName || g.email}
+                                            </SelectItem>
                                         ))}
                                     </SelectContent>
                                  </Select>
