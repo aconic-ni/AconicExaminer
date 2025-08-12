@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 export const initialInfoSchema = z.object({
@@ -14,21 +15,21 @@ export const productSchema = z.object({
   id: z.string().optional(), // Optional for new products, required for updates
   itemNumber: z.string().optional(),
   weight: z.string().optional(),
-  description: z.string().optional(),
+  description: z.string().min(1, 'Descripción es requerida.'),
   brand: z.string().optional(),
   model: z.string().optional(),
   unitMeasure: z.string().optional(),
   serial: z.string().optional(),
   origin: z.string().optional(),
-  numberPackages: z.string().optional(),
-  quantityPackages: z.preprocess(
-    (val) => (val === "" || val === undefined || val === null) ? undefined : (typeof val === 'string' ? parseInt(val, 10) : val),
-    z.number().min(0, "Cantidad de bultos debe ser positiva.").optional()
-  ),
-  quantityUnits: z.preprocess(
-    (val) => (val === "" || val === undefined || val === null) ? undefined : (typeof val === 'string' ? parseInt(val, 10) : val),
-    z.number().min(0, "Cantidad de unidades debe ser positiva.").optional()
-  ),
+  numberPackages: z.string().min(1, 'Numeración de Bultos es requerida.'),
+  quantityPackages: z.coerce.number({
+    required_error: 'Cantidad de Bultos es requerida.',
+    invalid_type_error: "Debe ser un número."
+   }).min(0, "Cantidad de bultos debe ser positiva."),
+  quantityUnits: z.coerce.number({
+    required_error: 'Cantidad de Unidades es requerida.',
+    invalid_type_error: "Debe ser un número."
+  }).min(0, "Cantidad de unidades debe ser positiva."),
   packagingCondition: z.string().optional(),
   observation: z.string().optional(),
   isConform: z.boolean().default(false),
