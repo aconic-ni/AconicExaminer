@@ -14,13 +14,22 @@ import type { Timestamp as FirestoreTimestamp } from 'firebase/firestore';
 import { downloadExcelFile } from '@/lib/fileExporter';
 import { BitacoraModal } from './BitacoraModal';
 
+// Helper function to format timestamp
+const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
+  if (!timestamp) return 'N/A';
+  // Firestore timestamps can be objects, so we need to convert them to JS Date objects
+  const date = timestamp.toDate();
+  return date.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' });
+};
+
+
 // Helper component for displaying product details in the fetched exam
 const FetchedDetailItem: React.FC<{ label: string; value?: string | number | null | boolean | FirestoreTimestamp; icon?: React.ReactNode }> = ({ label, value, icon }) => {
   let displayValue: string;
   if (typeof value === 'boolean') {
     displayValue = value ? 'Sí' : 'No';
   } else if (value instanceof Timestamp) {
-    displayValue = value.toDate().toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'medium' });
+    displayValue = formatTimestamp(value);
   } else {
     displayValue = String(value ?? 'N/A');
   }
