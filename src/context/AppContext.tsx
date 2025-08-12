@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 import type { ExamData, Product, AppUser as AuthAppUser, ExamDocument, AuditLogEntry } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './AuthContext';
-import { doc, setDoc, Timestamp, addDoc, collection } from 'firebase/firestore';
+import { doc, setDoc, Timestamp, addDoc, collection, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -112,10 +112,19 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
           savedBy: authUser.email,
           status: 'incomplete', // Add a status field
           lastUpdated: Timestamp.fromDate(new Date()),
+          savedAt: Timestamp.fromDate(new Date()), // Keep track of every save
       };
       
       try {
-          await setDoc(examDocRef, dataToSave, { merge: true }); // Merge to avoid overwriting with partial data
+          // Check if it's the very first save to set createdAt and lock
+          const docSnap = await getDoc(examDocRef);
+          if (!docSnap.exists() || !docSnap.data()?.createdAt) {
+              dataToSave.createdAt = Timestamp.fromDate(new Date());
+          }
+
+          // Lock is managed when starting and finishing, not here.
+          // We just update the content and savedAt timestamp.
+          await setDoc(examDocRef, dataToSave, { merge: true });
           console.log(`Soft save successful for NE: ${currentExamData.ne}`);
       } catch (error) {
           console.error("Error during soft save:", error);
