@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useAppContext, ExamStep } from '@/context/AppContext';
-import { CheckCircle, FilePlus, RotateCcw, Save } from 'lucide-react';
+import { CheckCircle, FilePlus, RotateCcw, Save, Home } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { doc, setDoc, Timestamp } from "firebase/firestore";
@@ -21,12 +21,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useRouter } from 'next/navigation';
 
 
 export function SuccessModal() {
   const { currentStep, setCurrentStep, resetApp, examData, products } = useAppContext();
   const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleSaveToDatabase = async () => {
     if (!examData || !user || !user.email) {
@@ -68,7 +70,9 @@ export function SuccessModal() {
         products: productsForDb,
         savedBy: user.email,
         status: 'complete', // Mark as complete
+        lock: 'off', // Unlock the document
         lastUpdated: Timestamp.fromDate(new Date()),
+        savedAt: Timestamp.fromDate(new Date()),
         completedAt: Timestamp.fromDate(new Date()), // Set completion timestamp
       };
   
@@ -86,6 +90,11 @@ export function SuccessModal() {
       });
     }
   };
+  
+  const handleStartNew = () => {
+    resetApp();
+    router.push('/'); // Navigate to home, which will redirect to the correct welcome page
+  }
 
 
   if (currentStep !== ExamStep.SUCCESS) {
@@ -137,19 +146,19 @@ export function SuccessModal() {
           <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button className="btn-secondary w-full">
-                  <FilePlus className="mr-2 h-4 w-4" /> Empezar Nuevo
+                  <Home className="mr-2 h-4 w-4" /> Volver al Inicio
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                   <AlertDialogHeader>
                       <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
                       <AlertDialogDescription>
-                          Está a punto de iniciar un nuevo examen. Se borrará toda la información del examen actual que no haya sido guardada en la base de datos.
+                          Está a punto de volver al inicio. Se borrará toda la información del examen actual que no haya sido guardada en la base de datos.
                       </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                       <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => resetApp()}>Sí, empezar nuevo</AlertDialogAction>
+                      <AlertDialogAction onClick={handleStartNew}>Sí, volver al inicio</AlertDialogAction>
                   </AlertDialogFooter>
               </AlertDialogContent>
           </AlertDialog>
@@ -158,3 +167,4 @@ export function SuccessModal() {
     </Dialog>
   );
 }
+
