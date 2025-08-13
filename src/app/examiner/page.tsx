@@ -21,8 +21,8 @@ export default function ExaminerPage() {
 
   useEffect(() => {
     if (!authLoading) {
-      // Redirect if not authenticated, or if user is not a 'gestor'
-      const allowedRoles = ['gestor'];
+      // Redirect if not authenticated, or if user is not a 'gestor' or 'admin'
+      const allowedRoles = ['gestor', 'admin'];
       if (!user || (user.role && !allowedRoles.includes(user.role))) {
           router.push('/');
       }
@@ -30,7 +30,8 @@ export default function ExaminerPage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (!authLoading && user && !isProfileComplete) {
+    // an admin should not be forced to set a display name if they are just viewing
+    if (!authLoading && user && !isProfileComplete && user.role !== 'admin') {
       setIsDisplayNameModalOpen(true);
     } else {
       setIsDisplayNameModalOpen(false);
@@ -55,7 +56,7 @@ export default function ExaminerPage() {
   }, [currentStep]);
 
 
-  if (authLoading || (user && !isProfileComplete) || !user || (user.role && !['gestor'].includes(user.role))) {
+  if (authLoading || (user && !isProfileComplete && user.role !== 'admin') || !user || (user.role && !['gestor', 'admin'].includes(user.role))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
