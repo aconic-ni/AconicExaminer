@@ -1,7 +1,7 @@
 
 "use client";
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAppContext, ExamStep } from '@/context/AppContext';
 import { ProductTable } from './ProductTable';
 import { AddProductModal } from './AddProductModal';
@@ -59,6 +59,10 @@ export function ProductListScreen() {
                     <ArrowLeft className="mr-1 h-4 w-4" /> Regresar para modificar
                 </Button>
             </div>
+        </div>
+        
+        <div className="mb-4">
+            <h3 className="text-lg font-medium">Productos Añadidos: {products.length}</h3>
         </div>
         
         <ProductTable />
