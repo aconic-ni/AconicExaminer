@@ -91,7 +91,7 @@ export function ProductTable() {
                       <Edit3 className="mr-2 h-4 w-4" /> Editar
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => {
-                      if (confirm('¿Está seguro de que desea eliminar este producto?')) {
+                      if (confirm('Estas seguro de eliminar este producto esta accion no se puede revertir')) {
                         deleteProduct(product.id);
                       }
                     }} className="text-destructive focus:text-destructive focus:bg-destructive/10">
