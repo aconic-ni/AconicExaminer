@@ -1,5 +1,6 @@
 
 import { z } from 'zod';
+import { Timestamp } from 'firebase/firestore';
 
 export const initialInfoSchema = z.object({
   ne: z.string().min(1, "NE es requerido."),
@@ -36,6 +37,7 @@ export const productSchema = z.object({
   isExcess: z.boolean().default(false),
   isMissing: z.boolean().default(false),
   isFault: z.boolean().default(false),
+  productTimestampSaveAt: z.custom<Timestamp>().optional(),
 });
 
 export type ProductFormData = z.infer<typeof productSchema>;
