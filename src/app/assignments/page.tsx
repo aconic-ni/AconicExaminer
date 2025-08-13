@@ -28,6 +28,8 @@ export default function AssignmentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const allowedRoles = ['coordinadora', 'admin'];
+
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
@@ -56,7 +58,7 @@ export default function AssignmentsPage() {
 
   useEffect(() => {
     if (!authLoading) {
-      if (!user || user.role !== 'coordinadora') {
+      if (!user || !allowedRoles.includes(user.role as string)) {
         router.push('/');
       } else {
         fetchData();
@@ -136,7 +138,7 @@ export default function AssignmentsPage() {
   };
   
 
-  if (authLoading || !user || user.role !== 'coordinadora' || isLoading) {
+  if (authLoading || !user || !allowedRoles.includes(user.role as string) || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
