@@ -71,7 +71,6 @@ export function ExaminerWelcome() {
         await updateDoc(examDocRef, {
             lock: 'on',
             createdAt: serverTimestamp(), // Marks the start of the practical work
-            savedAt: serverTimestamp() // Also update savedAt on start
         });
         
         // Load data into context
