@@ -52,10 +52,12 @@ export function InitialInfoForm() {
   async function onSubmit(data: InitialInfoFormData) {
     setExamData(data); // Update context locally first
     try {
-      await softSaveExam(data, []); // Perform the initial save
+      // Perform the initial save with an empty product list.
+      // `createdAt` will not be set at this stage.
+      await softSaveExam(data, []); 
       toast({
-        title: "Progreso Guardado",
-        description: "La información inicial del examen ha sido guardada.",
+        title: "Información Guardada",
+        description: "La información inicial del examen ha sido guardada. Ahora puede añadir productos.",
       });
       setCurrentStep(ExamStep.PRODUCT_LIST);
     } catch (error) {
