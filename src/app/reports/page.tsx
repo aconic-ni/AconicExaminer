@@ -66,7 +66,7 @@ export default function ReportsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const q = query(collection(db, "examenesPrevios"), orderBy("ne"));
+      const q = query(collection(db, "examenesPrevios"), where("isArchived", "!=", true), orderBy("isArchived"), orderBy("ne"));
       const querySnapshot = await getDocs(q);
       
       const fetchedExams = querySnapshot.docs.map(docSnapshot => ({ id: docSnapshot.id, ...docSnapshot.data() } as ExamDocument));
@@ -335,8 +335,3 @@ export default function ReportsPage() {
     </AppShell>
   );
 }
-
-
-    
-
-    
