@@ -67,9 +67,9 @@ export function ExaminerWelcome() {
     setIsLoading(true);
     try {
         const examDocRef = doc(db, "examenesPrevios", exam.ne.toUpperCase());
-        // Lock the exam before starting
+        // Lock the exam and set its creation date when work starts
         await updateDoc(examDocRef, {
-            // lock: 'on', // lock is handled on completion now
+            lock: 'on',
             createdAt: serverTimestamp(), // Marks the start of the practical work
             savedAt: serverTimestamp() // Also update savedAt on start
         });
@@ -114,9 +114,9 @@ export function ExaminerWelcome() {
       if (docSnap.exists()) {
         const recoveredExam = docSnap.data() as ExamDocument;
 
-        // An exam cannot be recovered if it's locked (on) or already has a completion date
-        if (recoveredExam.lock === 'on' || !!recoveredExam.completedAt) {
-            const errorMessage = "Este previo ya se encuentra finalizado, no se puede recuperar.";
+        // An exam cannot be recovered if it's locked, completed, or has a 'complete' status.
+        if (recoveredExam.lock === 'on' || !!recoveredExam.completedAt || recoveredExam.status === 'complete') {
+            const errorMessage = "Este previo ya se encuentra finalizado o está en uso. Intenta con otro NE o contacta al gestor asignado.";
             setError(errorMessage);
             toast({ 
                 title: "Recuperación No Permitida", 
@@ -127,7 +127,9 @@ export function ExaminerWelcome() {
             return;
         }
         
-        // If checks pass, proceed to load data. No need to change lock status here.
+        // If checks pass, proceed to load data and lock the exam.
+        await updateDoc(examDocRef, { lock: 'on' });
+
         setExamData({
             ne: recoveredExam.ne,
             reference: recoveredExam.reference,
@@ -238,7 +240,7 @@ export function ExaminerWelcome() {
                                 </p>
                             </div>
                             <Button size="sm" onClick={() => handleStartAssigned(exam)} disabled={isLoading || exam.lock === 'on'}>
-                                {exam.lock === 'on' ? 'Finalizado' : <><PlayCircle className="mr-2 h-4 w-4"/> Empezar Previo</>}
+                                {exam.lock === 'on' ? 'En Uso' : <><PlayCircle className="mr-2 h-4 w-4"/> Empezar Previo</>}
                             </Button>
                         </div>
                     ))}
