@@ -176,7 +176,7 @@ export function SuccessModal() {
         </DialogContent>
       </Dialog>
       
-      <AlertDialog open={isInstructionAlertOpen}>
+      <AlertDialog open={isInstructionAlertOpen} onOpenChange={setIsInstructionAlertOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>Instrucción General 021</AlertDialogTitle>
@@ -187,9 +187,9 @@ export function SuccessModal() {
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <Button variant="outline" onClick={handleGoHome}>
+                <AlertDialogAction onClick={() => setIsInstructionAlertOpen(false)}>
                     Confirmar
-                </Button>
+                </AlertDialogAction>
                 <Button asChild className="bg-green-500 hover:bg-green-600">
                     <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                         <MessageSquare className="mr-2 h-4 w-4" />
