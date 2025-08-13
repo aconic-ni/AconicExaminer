@@ -194,22 +194,33 @@ export function downloadReportAsExcel(exams: ExamDocument[]) {
     'Consignatario',
     'Solicitado Por',
     'Asignado a',
+    'Fecha Asignación',
     'Inicio de Previo',
     'Fin de Previo',
     'Cantidad de Productos',
     'Guardado Por'
   ];
 
-  const reportRows = exams.map(exam => [
-    exam.ne,
-    exam.consignee,
-    exam.requestedBy || 'N/A', // Handle old exams
-    exam.assignedTo || exam.manager, // Handle old exams
-    formatTimestamp(exam.createdAt || exam.lastUpdated), // Handle old exams
-    formatTimestamp(exam.completedAt || exam.lastUpdated), // Handle old exams
-    exam.products?.length || 0,
-    exam.savedBy || 'N/A'
-  ]);
+  const reportRows = exams.map(exam => {
+      const asignadoA = exam.assignedTo || exam.manager;
+      const solicitadoPor = exam.requestedBy ?? 'ana.estrada@aconic.com.ni';
+      const fechaAsignacion = formatTimestamp(exam.assignedAt ?? exam.savedAt);
+      const inicioPrevio = formatTimestamp(exam.createdAt ?? exam.savedAt);
+      const finPrevio = formatTimestamp(exam.completedAt ?? exam.savedAt);
+      
+      return [
+        exam.ne,
+        exam.consignee,
+        solicitadoPor,
+        asignadoA,
+        fechaAsignacion,
+        inicioPrevio,
+        finPrevio,
+        exam.products?.length || 0,
+        exam.savedBy || 'N/A'
+      ];
+  });
+
 
   const ws_data = [
     ['REPORTE DE EXÁMENES PREVIOS - CustomsEX-p'],
