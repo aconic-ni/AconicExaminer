@@ -50,13 +50,19 @@ export default function DatabasePage() {
     const uniquePotentialIds = Array.from(new Set(potentialIds));
 
     let foundExam: ExamDocument | null = null;
+    let docSnap;
 
     try {
       for (const id of uniquePotentialIds) {
         const examDocRef = doc(db, "examenesPrevios", id);
-        const docSnap = await getDoc(examDocRef);
+        docSnap = await getDoc(examDocRef);
         if (docSnap.exists()) {
-          foundExam = { id: docSnap.id, ...docSnap.data() } as ExamDocument;
+          const examData = { id: docSnap.id, ...docSnap.data() } as ExamDocument;
+          // For non-admin users, hide archived exams
+          if (examData.isArchived && user?.role !== 'admin') {
+              continue;
+          }
+          foundExam = examData;
           break; // Document found, exit loop
         }
       }
@@ -141,3 +147,5 @@ export default function DatabasePage() {
     </AppShell>
   );
 }
+
+    
