@@ -1,7 +1,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'gestor' | 'aforador' | 'ejecutivo' | 'coordinadora';
+export type UserRole = 'gestor' | 'aforador' | 'ejecutivo' | 'coordinadora' | 'admin';
 
 export interface ExamData {
   ne: string;
@@ -30,6 +30,7 @@ export interface Product {
   isExcess: boolean;
   isMissing: boolean;
   isFault: boolean;
+  productTimestampSaveAt?: Timestamp;
 }
 
 // User type from Firebase, can be extended
@@ -57,6 +58,7 @@ export interface ExamDocument extends ExamData {
   requestedAt?: Timestamp | null;
   assignedTo?: string | null; // name of gestor
   assignedAt?: Timestamp | null;
+  isArchived?: boolean; // For soft delete
 }
 
 export interface Comment {
@@ -92,6 +94,21 @@ export interface AuditLogEntry {
     };
 }
 
+export interface AdminAuditLogEntry {
+    id: string;
+    collection: string;
+    docId: string;
+    adminId: string;
+    adminEmail: string;
+    timestamp: Timestamp;
+    action: 'update';
+    changes: {
+        field: string;
+        oldValue: any;
+        newValue: any;
+    }[];
+}
+
 
 export interface ExamRequest {
     id: string;
@@ -105,3 +122,5 @@ export interface ExamRequest {
     assignedTo?: string; // name of gestor
     assignedAt?: Timestamp;
 }
+
+    
