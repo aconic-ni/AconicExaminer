@@ -12,7 +12,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      if (user.role === 'aforador') {
+      if (user.role === 'admin') {
+        router.push('/admin');
+      } else if (user.role === 'aforador') {
         router.push('/database');
       } else if (user.role === 'ejecutivo') {
         router.push('/executive');
