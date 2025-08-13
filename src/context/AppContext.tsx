@@ -112,18 +112,19 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
           savedBy: authUser.email,
           status: 'incomplete', // Add a status field
           lastUpdated: Timestamp.fromDate(new Date()),
-          savedAt: Timestamp.fromDate(new Date()), // Keep track of every save
       };
       
       try {
-          // Check if it's the very first save to set createdAt and lock
           const docSnap = await getDoc(examDocRef);
-          if (!docSnap.exists() || !docSnap.data()?.createdAt) {
+          
+          // Set createdAt timestamp only when the FIRST product is added
+          if (currentProducts.length === 1 && (!docSnap.exists() || !docSnap.data().createdAt)) {
               dataToSave.createdAt = Timestamp.fromDate(new Date());
           }
 
-          // Lock is managed when starting and finishing, not here.
-          // We just update the content and savedAt timestamp.
+          // Always update savedAt timestamp for any save
+          dataToSave.savedAt = Timestamp.fromDate(new Date());
+
           await setDoc(examDocRef, dataToSave, { merge: true });
           console.log(`Soft save successful for NE: ${currentExamData.ne}`);
       } catch (error) {
@@ -148,7 +149,11 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
   }, []);
 
   const addProduct = useCallback((productData: Omit<Product, 'id'>) => {
-    const newProduct: Product = { ...productData, id: uuidv4() };
+    const newProduct: Product = { 
+        ...productData, 
+        id: uuidv4(),
+        productTimestampSaveAt: Timestamp.fromDate(new Date()),
+    };
     setProductsState((prevProducts) => {
         const newProducts = [...prevProducts, newProduct];
         softSaveExam(examData, newProducts);
