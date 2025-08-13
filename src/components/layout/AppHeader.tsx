@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
-import { FileText, LogOut, UserCircle, Camera, FileSpreadsheet, ListTodo, Database, Home, Menu, X } from 'lucide-react';
+import { FileText, LogOut, UserCircle, Camera, FileSpreadsheet, ListTodo, Database, Home, Menu, X, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -32,7 +32,8 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: '/assignments', label: 'Asignaciones', icon: ListTodo, roles: ['coordinadora'] },
+  { href: '/admin', label: 'Admin', icon: Shield, roles: ['admin'] },
+  { href: '/assignments', label: 'Asignaciones', icon: ListTodo, roles: ['coordinadora', 'admin'] },
   { href: '/reports', label: 'Reportes', icon: FileSpreadsheet, roles: ['all'] },
   { href: '/database', label: 'Base de datos', icon: Database, roles: ['all'] },
   { href: '/', label: 'Home', icon: Home, roles: ['all'] },
