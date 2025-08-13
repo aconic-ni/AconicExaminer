@@ -16,7 +16,9 @@ export default function HomePage() {
     if (!loading && user) {
       // User is logged in, redirect them based on their role/type.
       let targetPath = '/examiner'; // Default for 'gestor'
-      if (user.role === 'aforador') {
+      if (user.role === 'admin') {
+        targetPath = '/admin';
+      } else if (user.role === 'aforador') {
         targetPath = '/database';
       } else if (user.role === 'ejecutivo') {
         targetPath = '/executive';
@@ -53,7 +55,7 @@ export default function HomePage() {
           onClick={() => setIsLoginModalOpen(true)}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && setIsLoginModalOpen(true)}
+          onKeyDown={(e) => e.key === 'Enter' && setIsLoginModal-Open(true)}
           aria-label="Abrir inicio de sesión"
         >
           <FileText className="h-32 w-32 text-white" strokeWidth={1.5} />
