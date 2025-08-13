@@ -53,7 +53,7 @@ export function downloadExcelFile(data: ExportableExamData) {
   const now = new Date();
   const fechaHoraExportacion = `${now.toLocaleString('es-NI', { dateStyle: 'long', timeStyle: 'short' })}`;
 
-  const photoLinkUrl = `https://aconisani-my.sharepoint.com/my?id=%2Fpersonal%2Fasuntos%5Fjuridicos%5Faconic%5Fcom%5Fni%2FDocuments%2FExamenes%20Previos%20ACONIC%2F${encodeURIComponent(data.ne)}&ga=1`;
+  const photoLinkUrl = `https://aconisani-my.sharepoint.com/:f:/g/personal/asuntos_juridicos_aconic_com_ni/Emrpj4Ss8bhDifpuYc8U_bwBj9r29FGcXxzfxu4PSh2tEQ?e=FhIPTt`;
 
   // --- Hoja 1: Detalles del Examen y Productos ---
   const examDetailsSheetData: (string | number | Date | null | undefined | XLSX.CellObject)[][] = [
