@@ -11,7 +11,7 @@ export default function RequestPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const allowedRoles = ['ejecutivo', 'coordinadora'];
+  const allowedRoles = ['ejecutivo', 'coordinadora', 'admin'];
 
   useEffect(() => {
     if (!authLoading && (!user || !user.role || !allowedRoles.includes(user.role))) {
