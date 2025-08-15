@@ -105,7 +105,7 @@ export default function AssignmentsPage() {
         savedBy: user?.email || 'N/A', // Log who assigned it as initial save
         status: 'incomplete',
         lock: 'off', // Initial lock state is off, allowing recovery
-        createdAt: serverTimestamp(),
+        createdAt: null, // This will be set when the gestor starts the exam
         lastUpdated: serverTimestamp(),
         completedAt: null,
         requestedBy: originalRequest.requestedBy,
