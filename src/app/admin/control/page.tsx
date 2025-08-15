@@ -242,14 +242,16 @@ export default function AdminControlPage() {
   }
   
   if (selectedExam && isViewingLogs) {
-      return (
-          <AppShell>
+    return (
+        <AppShell>
             <div className="py-2 md:py-5 max-w-5xl mx-auto">
-                <Button onClick={handleCloseDetails} variant="outline" className="mb-4 no-print">Volver al listado</Button>
-                <AuditLogPreview logs={auditLogs} exam={selectedExam} />
+                 <div className="bg-card p-4 rounded-lg shadow-md">
+                    <Button onClick={handleCloseDetails} variant="outline" className="mb-4 no-print">Volver al listado</Button>
+                    <AuditLogPreview logs={auditLogs} exam={selectedExam} />
+                 </div>
             </div>
-          </AppShell>
-      )
+        </AppShell>
+    )
   }
 
   return (
@@ -360,5 +362,3 @@ export default function AdminControlPage() {
     </AppShell>
   );
 }
-
-    
