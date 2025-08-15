@@ -24,10 +24,20 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 
 type SearchMode = 'range' | 'specific' | 'month' | 'gestor';
 
-const months = Array.from({ length: 12 }, (_, i) => ({
-  value: i,
-  label: new Date(0, i).toLocaleString(es, { month: 'long' }),
-}));
+const months = [
+    { value: 0, label: 'Enero' },
+    { value: 1, label: 'Febrero' },
+    { value: 2, label: 'Marzo' },
+    { value: 3, label: 'Abril' },
+    { value: 4, label: 'Mayo' },
+    { value: 5, label: 'Junio' },
+    { value: 6, label: 'Julio' },
+    { value: 7, label: 'Agosto' },
+    { value: 8, label: 'Septiembre' },
+    { value: 9, label: 'Octubre' },
+    { value: 10, label: 'Noviembre' },
+    { value: 11, label: 'Diciembre' }
+];
 
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -66,12 +76,15 @@ export default function ReportsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const q = query(collection(db, "examenesPrevios"), where("isArchived", "!=", true), orderBy("isArchived"), orderBy("ne"));
+      const q = query(collection(db, "examenesPrevios"), orderBy("ne"));
       const querySnapshot = await getDocs(q);
       
       const fetchedExams = querySnapshot.docs.map(docSnapshot => ({ id: docSnapshot.id, ...docSnapshot.data() } as ExamDocument));
       
-      const examPromises = fetchedExams.map(async (examData) => {
+      // Filter out archived exams client-side to include older documents without the 'isArchived' field
+      const activeExams = fetchedExams.filter(exam => exam.isArchived !== true);
+
+      const examPromises = activeExams.map(async (examData) => {
         if (!examData.id) return { ...examData, commentCount: 0 };
         const commentsRef = collection(db, "examenesPrevios", examData.id, "comments");
         const commentsSnapshot = await getDocs(commentsRef);
