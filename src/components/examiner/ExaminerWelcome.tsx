@@ -67,11 +67,13 @@ export function ExaminerWelcome() {
     setIsLoading(true);
     try {
         const examDocRef = doc(db, "examenesPrevios", exam.ne.toUpperCase());
-        // Lock the exam and set its creation date when work starts
-        await updateDoc(examDocRef, {
-            lock: 'on',
-            createdAt: serverTimestamp(), // Marks the start of the practical work
-        });
+        // Set creation date when work starts if not already set
+        const docSnap = await getDoc(examDocRef);
+        if (!docSnap.data()?.createdAt) {
+            await updateDoc(examDocRef, {
+                createdAt: serverTimestamp(), // Marks the start of the practical work
+            });
+        }
         
         // Load data into context
         setExamData({
@@ -113,9 +115,9 @@ export function ExaminerWelcome() {
       if (docSnap.exists()) {
         const recoveredExam = docSnap.data() as ExamDocument;
 
-        // An exam cannot be recovered if it's locked, completed, or has a 'complete' status.
-        if (recoveredExam.lock === 'on' || !!recoveredExam.completedAt || recoveredExam.status === 'complete') {
-            const errorMessage = "Este previo ya se encuentra finalizado o está en uso. Intenta con otro NE o contacta al gestor asignado.";
+        // An exam cannot be recovered if it's already completed.
+        if (recoveredExam.status === 'complete') {
+            const errorMessage = "Este previo ya se encuentra finalizado y no puede ser modificado.";
             setError(errorMessage);
             toast({ 
                 title: "Recuperación No Permitida", 
@@ -126,9 +128,7 @@ export function ExaminerWelcome() {
             return;
         }
         
-        // If checks pass, proceed to load data and lock the exam.
-        await updateDoc(examDocRef, { lock: 'on' });
-
+        // If checks pass, proceed to load data.
         setExamData({
             ne: recoveredExam.ne,
             reference: recoveredExam.reference,
@@ -238,8 +238,8 @@ export function ExaminerWelcome() {
                                     Asignado por {exam.requestedBy} el {formatTimestamp(exam.assignedAt)}
                                 </p>
                             </div>
-                            <Button size="sm" onClick={() => handleStartAssigned(exam)} disabled={isLoading || exam.lock === 'on'}>
-                                {exam.lock === 'on' ? 'En Uso' : <><PlayCircle className="mr-2 h-4 w-4"/> Empezar Previo</>}
+                            <Button size="sm" onClick={() => handleStartAssigned(exam)} disabled={isLoading}>
+                                <PlayCircle className="mr-2 h-4 w-4"/> Empezar Previo
                             </Button>
                         </div>
                     ))}
