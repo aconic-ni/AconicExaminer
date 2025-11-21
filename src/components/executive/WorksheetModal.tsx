@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label';
 import { X, Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import type { AforoCase, AforoCaseUpdate } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 // Zod Schema Definition
 const worksheetDocumentSchema = z.object({
@@ -215,12 +215,12 @@ export function WorksheetModal({ isOpen, onClose, onWorksheetCreated }: Workshee
         onClose();
         form.reset();
         
-    } catch (error) {
+    } catch (serverError: any) {
         const permissionError = new FirestorePermissionError({
             path: `batch write to worksheets/${neTrimmed} and AforoCases/${neTrimmed}`,
             operation: 'create',
-            requestResourceData: { worksheetData: data, aforoCaseData: data },
-        }, error);
+            requestResourceData: { worksheetData: data, aforoCaseData: {ne: neTrimmed} },
+        }, serverError);
         errorEmitter.emit('permission-error', permissionError);
     } finally {
       setIsSubmitting(false);
