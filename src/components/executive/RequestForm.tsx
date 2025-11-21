@@ -1,4 +1,3 @@
-
 "use client";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +14,8 @@ import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useState } from 'react';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const requestSchema = z.object({
   ne: z.string().min(1, "NE es requerido."),
@@ -54,64 +55,77 @@ export function RequestForm() {
     }
 
     setIsSubmitting(true);
+    const ne = data.ne.toUpperCase().trim();
+    
+    // Verification logic
+    const examDocRef = doc(db, "examenesPrevios", ne);
+    const requestDocRef = doc(db, "solicitudesExamen", ne);
 
-    try {
-        const ne = data.ne.toUpperCase().trim();
-        const examDocRef = doc(db, "examenesPrevios", ne);
-        const requestDocRef = doc(db, "solicitudesExamen", ne);
-
-        const [examDocSnap, requestDocSnap] = await Promise.all([
-            getDoc(examDocRef),
-            getDoc(requestDocRef)
-        ]);
-        
+    Promise.all([
+        getDoc(examDocRef),
+        getDoc(requestDocRef)
+    ]).then(([examDocSnap, requestDocSnap]) => {
         if (examDocSnap.exists()) {
             toast({
                 title: "NE Duplicado",
-                description: `El examen NE: ${ne} ya existe en la base de datos y no puede ser creado de nuevo.`,
+                description: `El examen NE: ${ne} ya existe. Use la función de recuperar si desea continuarlo.`,
                 variant: "destructive",
             });
             setIsSubmitting(false);
             return;
         }
-
         if (requestDocSnap.exists()) {
             toast({
                 title: "Solicitud Duplicada",
-                description: `Ya existe una solicitud para el NE: ${ne}. No se puede crear de nuevo.`,
+                description: `Ya existe una solicitud para el NE: ${ne}.`,
                 variant: "destructive",
             });
             setIsSubmitting(false);
             return;
         }
 
-      const requestData = {
-        ...data,
-        ne: ne, // Use trimmed and uppercased NE
-        status: 'pendiente',
-        requestedBy: user.email,
-        requestedAt: Timestamp.fromDate(new Date()),
-      };
+        // If checks pass, proceed to create
+        const requestData = {
+            ...data,
+            ne: ne,
+            status: 'pendiente' as const,
+            requestedBy: user.email!,
+            requestedAt: Timestamp.fromDate(new Date()),
+        };
 
-      await setDoc(requestDocRef, requestData);
+        setDoc(requestDocRef, requestData)
+            .then(() => {
+                toast({
+                    title: "Solicitud Enviada",
+                    description: `La solicitud para el examen NE: ${ne} ha sido creada.`,
+                });
+                router.push(backLink);
+            })
+            .catch(async (serverError) => {
+                 const permissionError = new FirestorePermissionError({
+                    path: requestDocRef.path,
+                    operation: 'create',
+                    requestResourceData: requestData
+                } satisfies SecurityRuleContext, serverError);
+                errorEmitter.emit('permission-error', permissionError);
+                setIsSubmitting(false);
+            });
 
-      toast({
-        title: "Solicitud Enviada",
-        description: `La solicitud para el examen NE: ${data.ne} ha sido creada exitosamente.`,
-      });
-
-      router.push(backLink);
-
-    } catch (error) {
-      toast({
-        title: "Error al Enviar",
-        description: "No se pudo guardar la solicitud. Por favor, inténtelo de nuevo.",
-        variant: "destructive",
-      });
-      console.error("Failed to save exam request:", error);
-    } finally {
+    }).catch(async (serverError) => {
+        // This catch block handles errors from the getDoc calls
+        const permissionError = new FirestorePermissionError({
+            path: `Verificación de duplicados para NE: ${ne} en examenesPrevios y solicitudesExamen`,
+            operation: 'get',
+        }, serverError);
+        errorEmitter.emit('permission-error', permissionError);
+        
+        toast({
+            title: "Error al Verificar",
+            description: "No se pudo comprobar si el registro ya existe. Verifique sus permisos de lectura.",
+            variant: "destructive",
+        });
         setIsSubmitting(false);
-    }
+    });
   }
 
   return (
