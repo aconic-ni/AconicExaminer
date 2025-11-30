@@ -132,7 +132,7 @@ export default function ExecutivePage() {
   });
 
   useEffect(() => {
-    if (!authLoading && (!user || !['ejecutivo', 'coordinadora', 'admin'].includes(user.role || ''))) {
+    if (!authLoading && (!user || !['ejecutivo', 'coordinadora', 'admin', 'supervisor'].includes(user.role || ''))) {
       router.push('/');
     }
   }, [user, authLoading, router]);
@@ -145,8 +145,8 @@ export default function ExecutivePage() {
     let q;
     const aforoCasesRef = collection(db, 'AforoCases');
 
-    // Admin and Coordinadora see all cases.
-    if (user.role === 'admin' || user.role === 'coordinadora') {
+    // Admin, Coordinadora and Supervisor see all cases.
+    if (user.role === 'admin' || user.role === 'coordinadora' || user.role === 'supervisor') {
         q = query(aforoCasesRef, orderBy('createdAt', 'desc'));
     } 
     // Ejecutivo in a group sees cases from group members.
@@ -435,7 +435,7 @@ export default function ExecutivePage() {
   
   const welcomeName = user?.displayName ? user.displayName.split(' ')[0] : 'Usuario';
 
-  if (authLoading || !user || !['ejecutivo', 'coordinadora', 'admin'].includes(user.role || '')) {
+  if (authLoading || !user || !['ejecutivo', 'coordinadora', 'admin', 'supervisor'].includes(user.role || '')) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
   if (selectedIncidentForDetails) {
@@ -812,4 +812,3 @@ export default function ExecutivePage() {
     </>
   );
 }
-
