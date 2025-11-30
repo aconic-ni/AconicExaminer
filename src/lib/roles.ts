@@ -32,6 +32,10 @@ export const roleConfig: Record<UserRole, RoleConfig> = {
     home: '/executive',
     navLinks: ['assignments', 'dashboard', 'dbPrevios', 'dbPagos', 'dbMemorandum', 'dbPermisos', 'dbValidaciones', 'photos', 'reportsPrevios'],
   },
+  supervisor: {
+    home: '/executive',
+    navLinks: ['assignments', 'dashboard', 'dbPrevios', 'dbPagos', 'dbMemorandum', 'dbPermisos', 'dbValidaciones', 'photos', 'reportsPrevios'],
+  },
   ejecutivo: {
     home: '/executive',
     navLinks: ['dashboard', 'dbPrevios', 'dbPagos', 'dbMemorandum', 'dbPermisos', 'photos', 'reportsPrevios', 'reportsAforo'],
@@ -47,10 +51,6 @@ export const roleConfig: Record<UserRole, RoleConfig> = {
   agente: {
     home: '/agente',
     navLinks: ['dbPrevios', 'photos', 'agenteCasos'],
-  },
-  supervisor: {
-    home: '/database',
-    navLinks: ['dbPrevios', 'dbPagos', 'dbMemorandum', 'dbPermisos', 'photos', 'reportsAforo'],
   },
   digitador: {
     home: '/thereporter',
