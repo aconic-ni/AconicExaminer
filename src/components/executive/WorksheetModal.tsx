@@ -174,26 +174,44 @@ export function WorksheetModal({ isOpen, onClose, onWorksheetCreated }: Workshee
   
   useEffect(() => {
     const fetchGroupMembers = async () => {
-      if (!user?.visibilityGroup || user.visibilityGroup.length === 0) {
-        setGroupMembers([]);
-        return;
-      }
-      const uidsToFetch = Array.from(new Set([user.uid, ...user.visibilityGroup]));
+        if (!user) return;
+        
+        const managementRoles = ['admin', 'supervisor', 'coordinadora'];
+        const isManagementRole = managementRoles.includes(user.role || '');
 
-      if (uidsToFetch.length === 0) return;
+        let uidsToFetch: string[] = [];
 
-      const usersQuery = query(collection(db, 'users'), where('__name__', 'in', uidsToFetch));
-      try {
-          const querySnapshot = await getDocs(usersQuery);
-          const members = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser));
-          setGroupMembers(members);
-      } catch (error) {
-          console.error("Error fetching group members:", error);
-          setGroupMembers([]);
-      }
+        if (isManagementRole) {
+            // Fetch all executives
+            const execQuery = query(collection(db, 'users'), where('role', '==', 'ejecutivo'));
+            const querySnapshot = await getDocs(execQuery);
+            const execs = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser));
+            setGroupMembers(execs);
+            return;
+        }
+        
+        if (user.visibilityGroup && user.visibilityGroup.length > 0) {
+            uidsToFetch = Array.from(new Set([user.uid, ...user.visibilityGroup]));
+        } else {
+            setGroupMembers([]);
+            return;
+        }
+
+        if (uidsToFetch.length === 0) return;
+
+        const usersQuery = query(collection(db, 'users'), where('__name__', 'in', uidsToFetch));
+        try {
+            const querySnapshot = await getDocs(usersQuery);
+            const members = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser));
+            setGroupMembers(members);
+        } catch (error) {
+            console.error("Error fetching group members:", error);
+            setGroupMembers([]);
+        }
     };
+
     if (isOpen) {
-      fetchGroupMembers();
+        fetchGroupMembers();
     }
   }, [isOpen, user]);
   
@@ -393,7 +411,36 @@ export function WorksheetModal({ isOpen, onClose, onWorksheetCreated }: Workshee
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <FormField control={form.control} name="ne" render={({ field }) => (<FormItem><FormLabel>NE</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
                     <FormField control={form.control} name="reference" render={({ field }) => (<FormItem><FormLabel>Referencia</FormLabel><FormControl><Input {...field} maxLength={12} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="executive" render={({ field }) => (<FormItem><FormLabel>Ejecutivo</FormLabel><FormControl><Input {...field} disabled /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField
+                      control={form.control}
+                      name="executive"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ejecutivo</FormLabel>
+                          {['admin', 'supervisor', 'coordinadora'].includes(user?.role || '') ? (
+                             <Select onValueChange={field.onChange} defaultValue={field.value}>
+                               <FormControl>
+                                 <SelectTrigger>
+                                   <SelectValue placeholder="Seleccionar ejecutivo..." />
+                                 </SelectTrigger>
+                               </FormControl>
+                               <SelectContent>
+                                 {groupMembers.map(member => (
+                                   <SelectItem key={member.uid} value={member.displayName || member.email!}>
+                                     {member.displayName || member.email}
+                                   </SelectItem>
+                                 ))}
+                               </SelectContent>
+                             </Select>
+                          ) : (
+                             <FormControl>
+                                <Input {...field} disabled />
+                            </FormControl>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     
                     <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                         <FormField
@@ -767,7 +814,7 @@ export function WorksheetModal({ isOpen, onClose, onWorksheetCreated }: Workshee
                             <TableHeader><TableRow>
                                 <TableHead>Permiso</TableHead>
                                 <TableHead>Factura Asociada</TableHead>
-                                {groupMembers.length > 1 && <TableHead>Asignado A</TableHead>}
+                                {groupMembers.length > 0 && <TableHead>Asignado A</TableHead>}
                                 <TableHead>Estado</TableHead>
                                 <TableHead className="text-right">Acción</TableHead>
                             </TableRow></TableHeader>
@@ -777,16 +824,14 @@ export function WorksheetModal({ isOpen, onClose, onWorksheetCreated }: Workshee
                                 <TableRow key={field.id}>
                                     <TableCell>{field.name}</TableCell>
                                     <TableCell>{field.facturaNumber || 'N/A'}</TableCell>
-                                    {groupMembers.length > 1 && (
+                                    {groupMembers.length > 0 && (
                                         <TableCell>
                                             <Controller
                                                 control={form.control}
                                                 name={`requiredPermits.${index}.assignedExecutive`}
                                                 render={({ field: controllerField }) => (
                                                      <Select onValueChange={controllerField.onChange} defaultValue={controllerField.value || user?.displayName || ''}>
-                                                        <SelectTrigger className="w-[180px]">
-                                                            <SelectValue placeholder="Asignar ejecutivo..." />
-                                                        </SelectTrigger>
+                                                        <SelectTrigger className="w-[180px]"><SelectValue placeholder="Asignar ejecutivo..." /></SelectTrigger>
                                                         <SelectContent>
                                                             {groupMembers.map(member => (
                                                                 <SelectItem key={member.uid} value={member.displayName || ''}>{member.displayName}</SelectItem>
