@@ -7,16 +7,35 @@ import { collection, query, onSnapshot, orderBy, Timestamp, where } from 'fireba
 import type { AforoCase, SolicitudRecord, InitialDataContext } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from '@/components/ui/dialog';
-import { Loader2, Package, Eye, ArrowLeft, X } from 'lucide-react';
+import { Loader2, Package, Eye, ArrowLeft, X, CheckCircle2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SolicitudDetailView from '@/components/shared/SolicitudDetailView';
 import { ScrollArea } from '../ui/scroll-area';
+import { Badge } from '../ui/badge';
 
 interface PaymentListModalProps {
   isOpen: boolean;
   onClose: () => void;
   caseData: AforoCase;
+}
+
+const getPaymentStatusBadge = (solicitud: SolicitudRecord) => {
+    if (solicitud.paymentStatus === 'Pagado') {
+        return (
+            <Badge className="bg-green-100 text-green-700 hover:bg-green-200">
+                <CheckCircle2 className="mr-2 h-4 w-4" /> Pagado
+            </Badge>
+        );
+    }
+    if (solicitud.paymentStatus?.startsWith('Error:')) {
+        return (
+            <Badge variant="destructive">
+                <AlertCircle className="mr-2 h-4 w-4" /> Error
+            </Badge>
+        );
+    }
+    return <Badge variant="outline">Pendiente</Badge>;
 }
 
 export function PaymentListModal({ isOpen, onClose, caseData }: PaymentListModalProps) {
@@ -126,9 +145,12 @@ export function PaymentListModal({ isOpen, onClose, caseData }: PaymentListModal
                       {payment.examDate ? format(payment.examDate, "PPP", { locale: es }) : 'Fecha no disponible'}
                     </p>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => setSelectedPayment(payment)}>
-                    <Eye className="mr-2 h-4 w-4" /> Ver Detalle
-                  </Button>
+                  <div className="flex items-center gap-4">
+                    {getPaymentStatusBadge(payment)}
+                    <Button variant="outline" size="sm" onClick={() => setSelectedPayment(payment)}>
+                        <Eye className="mr-2 h-4 w-4" /> Ver Detalle
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
