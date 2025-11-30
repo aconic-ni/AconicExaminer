@@ -252,10 +252,10 @@ export default function PermisosPage() {
                     onClick={() => setFocusMode(!focusMode)}
                 >
                     <SlidersHorizontal className="mr-2 h-4 w-4"/>
-                    {focusMode ? 'Modo Enfoque: Viendo Pendientes' : 'Viendo Todos'}
+                    {focusMode ? 'Pendientes' : 'Viendo Todos'}
                 </Button>
                 <p className="text-sm text-muted-foreground">
-                    Total de permisos mostrando: {filteredPermits.length}
+                    Total de permisos: {filteredPermits.length}
                 </p>
             </div>
           </CardHeader>
