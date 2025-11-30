@@ -21,10 +21,12 @@ import {
   Eye,
   MessageSquare,
   PlusSquare,
-  CheckCircle
+  CheckCircle,
+  Search
 } from 'lucide-react';
 import { DatePickerWithTime } from '../reports/DatePickerWithTime';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
+import { StatusBadges } from './StatusBadges';
 
 interface MobileCaseCardProps {
     caseData: WorksheetWithCase;
@@ -87,53 +89,61 @@ export const MobileCaseCard: React.FC<MobileCaseCardProps> = ({
     return (
         <Card key={c.id} className="w-full">
             <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                    <span className="font-bold text-lg text-primary">{c.ne}</span>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Abrir</span><PlusSquare className="h-5 w-5" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => caseActions.handleViewWorksheet(c)} disabled={!c.worksheetId}>
-                            <BookOpen className="mr-2 h-4 w-4" /> Ver Hoja de Trabajo
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForDocs(c)} disabled={!c}>
-                            <FilePlus className="mr-2 h-4 w-4" /> Docs y Permisos
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForQuickRequest(c)} disabled={!c.worksheet}>
-                            <FilePlus className="mr-2 h-4 w-4" /> Solicitar Previo
-                        </DropdownMenuItem>
-                         <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForPayment(c)} disabled={!c}>
-                            <Banknote className="mr-2 h-4 w-4" /> Solicitud de Pago
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForPaymentList(c)} disabled={!c}>
-                            <Banknote className="mr-2 h-4 w-4 text-blue-500" /> Ver Pagos
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForResa(c)} disabled={!c}>
-                            <BellIcon className="mr-2 h-4 w-4 text-orange-500" /> Notificar RESA
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForIncident(c)} disabled={!c}>
-                            <AlertTriangle className="mr-2 h-4 w-4 text-amber-600" /> Reportar Incidencia
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForValueDoubt(c)} disabled={!c}>
-                            <ShieldAlert className="mr-2 h-4 w-4 text-rose-600" /> Reportar Duda de Valor
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForHistory(c)} disabled={!c}><History className="mr-2 h-4 w-4" /> Ver Bitácora</DropdownMenuItem>
-                        {c.incidentReported && (<DropdownMenuItem onSelect={() => caseActions.setSelectedIncidentForDetails(c)}><Eye className="mr-2 h-4 w-4" /> Ver Incidencia</DropdownMenuItem>)}
-                         <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForComment(c)}><MessageSquare className="mr-2 h-4 w-4" /> Añadir/Ver Comentarios</DropdownMenuItem>
-                      </DropdownMenuContent>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <CardTitle className="font-bold text-lg text-primary">{c.ne}</CardTitle>
+                        <p className="text-sm text-muted-foreground truncate max-w-[200px]">{c.consignee}</p>
+                    </div>
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Abrir</span><PlusSquare className="h-5 w-5" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => caseActions.handleViewWorksheet(c)} disabled={!c.worksheetId}>
+                                <BookOpen className="mr-2 h-4 w-4" /> Ver Hoja de Trabajo
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => caseActions.handleSearchPrevio(c.ne)}>
+                                <Search className="mr-2 h-4 w-4" /> Buscar Previo
+                            </DropdownMenuItem>
+                             <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForDocs(c)} disabled={!c}>
+                                <FilePlus className="mr-2 h-4 w-4" /> Docs y Permisos
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForQuickRequest(c)} disabled={!c.worksheet}>
+                                <FilePlus className="mr-2 h-4 w-4" /> Solicitar Previo
+                            </DropdownMenuItem>
+                             <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForPayment(c)} disabled={!c}>
+                                <Banknote className="mr-2 h-4 w-4" /> Solicitud de Pago
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForPaymentList(c)} disabled={!c}>
+                                <Banknote className="mr-2 h-4 w-4 text-blue-500" /> Ver Pagos
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForResa(c)} disabled={!c}>
+                                <BellIcon className="mr-2 h-4 w-4 text-orange-500" /> Notificar RESA
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForIncident(c)} disabled={!c}>
+                                <AlertTriangle className="mr-2 h-4 w-4 text-amber-600" /> Reportar Incidencia
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForValueDoubt(c)} disabled={!c}>
+                                <ShieldAlert className="mr-2 h-4 w-4 text-rose-600" /> Reportar Duda de Valor
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForHistory(c)} disabled={!c}><History className="mr-2 h-4 w-4" /> Ver Bitácora</DropdownMenuItem>
+                            {c.incidentReported && (<DropdownMenuItem onSelect={() => caseActions.setSelectedIncidentForDetails(c)}><Eye className="mr-2 h-4 w-4" /> Ver Incidencia</DropdownMenuItem>)}
+                             <DropdownMenuItem onSelect={() => caseActions.setSelectedCaseForComment(c)}><MessageSquare className="mr-2 h-4 w-4" /> Añadir/Ver Comentarios</DropdownMenuItem>
+                        </DropdownMenuContent>
                     </DropdownMenu>
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">{c.consignee}</p>
+                </div>
             </CardHeader>
             <CardContent>
+                <div className="flex justify-center items-center mb-4">
+                    <StatusBadges caseData={c} />
+                </div>
                 <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="item-1">
                         <AccordionTrigger>Ver Detalles Completos</AccordionTrigger>
                         <AccordionContent>
-                           <div className="space-y-2">
+                           <div className="space-y-2 pt-2">
                                 <DetailRow label="Ejecutivo">{c.executive}</DetailRow>
                                 <DetailRow label="Factura">{firstFactura}</DetailRow>
                                 <DetailRow label="Estado Aforador"><Badge variant={getAforadorStatusBadgeVariant(c.aforadorStatus)}>{c.aforadorStatus || 'Pendiente'}</Badge></DetailRow>
