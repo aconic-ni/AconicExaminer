@@ -480,9 +480,6 @@ export default function ExecutivePage() {
                         <CardDescription>Seguimiento de operaciones, desde la hoja de trabajo hasta la facturación.</CardDescription>
                     </div>
                     <div className="flex flex-col sm:flex-row items-center gap-3">
-                        <Button asChild size="lg" className="h-12 text-md">
-                           <Link href="/executive/request"><FilePlus className="mr-2 h-5 w-5" />Solicitar Previo</Link>
-                        </Button>
                         <Button size="lg" variant="default" className="h-12 text-md" onClick={() => setIsWorksheetModalOpen(true)}>
                            <Edit className="mr-2 h-5 w-5" />Hojas de Trabajo
                        </Button>
