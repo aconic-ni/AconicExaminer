@@ -232,15 +232,21 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
     fetchAssignableUsers();
     
     let q = query(collection(db, "AforoCases"), orderBy('createdAt', 'desc'));
+    const constraints = [];
 
     if (filters.ne) {
-        q = query(q, where('ne', '>=', filters.ne.toUpperCase()), where('ne', '<=', filters.ne.toUpperCase() + '\uf8ff'));
+        constraints.push(where('ne', '>=', filters.ne.toUpperCase()), where('ne', '<=', filters.ne.toUpperCase() + '\uf8ff'));
     }
     if (filters.consignee) {
-        q = query(q, where('consignee', '>=', filters.consignee), where('consignee', '<=', filters.consignee + '\uf8ff'));
+        constraints.push(where('consignee', '>=', filters.consignee), where('consignee', '<=', filters.consignee + '\uf8ff'));
     }
     if (filters.dateRange?.from) {
-        q = query(q, where('createdAt', '>=', filters.dateRange.from), where('createdAt', '<=', endOfDay(filters.dateRange.to || filters.dateRange.from)));
+        constraints.push(where('createdAt', '>=', filters.dateRange.from), where('createdAt', '<=', endOfDay(filters.dateRange.to || filters.dateRange.from)));
+    }
+    if (constraints.length > 0) {
+        q = query(collection(db, "AforoCases"), ...constraints, orderBy('createdAt', 'desc'));
+    } else {
+        q = query(collection(db, "AforoCases"), orderBy('createdAt', 'desc'));
     }
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -593,8 +599,8 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
               <TableCell>
                 <div className="flex items-center gap-1">
                     <span>{caseItem.executive}</span>
-                    <LastUpdateTooltip lastUpdate={{by: caseItem.executive, at: caseItem.createdAt}} caseCreation={caseItem.createdAt} />
-                </div>
+                       <LastUpdateTooltip lastUpdate={{by: caseItem.executive, at: caseItem.createdAt}} caseCreation={caseItem.createdAt} />
+                  </div>
               </TableCell>
               <TableCell>{caseItem.consignee}</TableCell>
               <TableCell>
