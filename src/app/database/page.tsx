@@ -1,6 +1,6 @@
 
 "use client";
-import { useState, type FormEvent, useEffect } from 'react';
+import { useState, type FormEvent, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { AppShell } from '@/components/layout/AppShell';
@@ -13,7 +13,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import type { ExamDocument } from '@/types';
 import { FetchedExamDetails } from '@/components/database/FetchedExamDetails';
 
-export default function DatabasePage() {
+function DatabaseClientPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -157,4 +157,12 @@ export default function DatabasePage() {
       </div>
     </AppShell>
   );
+}
+
+export default function DatabasePage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}>
+            <DatabaseClientPage />
+        </Suspense>
+    )
 }
