@@ -86,7 +86,7 @@ export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => v
       <Card className="mt-6 w-full max-w-5xl mx-auto custom-shadow card-print-styles" id="printable-area">
         <div className="hidden print:block">
             <Image
-                src="/imagenes/HEADERSEXA.svg"
+                src="/AconicExaminer/imagenes/HEADERSEXA.svg"
                 alt="Examen Header"
                 width={800}
                 height={100}
@@ -265,6 +265,7 @@ export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => v
                   width={800}
                   height={50}
                   className="w-full h-auto mt-6"
+                  priority
               />
           </div>
         </CardContent>
