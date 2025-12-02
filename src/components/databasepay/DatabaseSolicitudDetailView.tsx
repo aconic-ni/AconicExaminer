@@ -129,7 +129,7 @@ export default function DatabaseSolicitudDetailView({ id, isInlineView, onBackTo
     
     return (
         <CardContent className="pt-4">
-              <Image src={`${basePath}/imagenes/HEADERSEXA.svg`} alt="Header Solicitud Detail" width={800} height={100} className="w-full h-auto object-contain" data-ai-hint="company logo banner" priority/>
+              <Image src=/AconicExaminer/imagenes/HEADERSEXA.svg} alt="Header Solicitud Detail" width={800} height={100} className="w-full h-auto object-contain" data-ai-hint="company logo banner" priority/>
                <div className="mb-3 p-4 border border-border rounded-md bg-secondary/5 card-print-styles">
                   <div className="flex justify-between items-center">
                       <DetailItem label="ID de Solicitud" value={solicitud.solicitudId} icon={Info} />
@@ -188,7 +188,7 @@ export default function DatabaseSolicitudDetailView({ id, isInlineView, onBackTo
                   <div className="pt-3"><DetailItem label="Correos de Notificación" value={solicitud.correo} icon={Mail} /><DetailItem label="Observación" value={solicitud.observation} icon={MessageSquare} /></div>
                 </div>
               </div>
-              <Image src={`${basePath}/imagenes/FOOTERSOLICITUDETAIL.svg`} alt="Footer Solicitud Detail" width={800} height={100} className="w-full h-auto object-contain mt-6" data-ai-hint="company seal official" priority />
+              <Image src=/AconicExaminer/imagenes/FOOTERSOLICITUDETAIL.svg} alt="Footer Solicitud Detail" width={800} height={100} className="w-full h-auto object-contain mt-6" data-ai-hint="company seal official" priority />
               <div className="no-print mt-4 flex justify-end">
                    <Button onClick={handlePrint}>
                        <Printer className="mr-2 h-4 w-4" /> Imprimir
