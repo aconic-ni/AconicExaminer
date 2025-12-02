@@ -1,3 +1,4 @@
+
 "use client";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,12 +11,23 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, Timestamp, collection, query, where, getCountFromServer } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useState } from 'react';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 
 const requestSchema = z.object({
   ne: z.string().min(1, "NE es requerido."),
@@ -31,6 +43,7 @@ export function RequestForm() {
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [extraCaseAlert, setExtraCaseAlert] = useState<{ isOpen: boolean; data: RequestFormData | null }>({ isOpen: false, data: null });
 
   const form = useForm<RequestFormData>({
     resolver: zodResolver(requestSchema),
@@ -44,91 +57,111 @@ export function RequestForm() {
   
   const backLink = user?.role === 'coordinadora' ? '/assignments' : '/executive';
 
+  const createRequest = async (docId: string, data: RequestFormData) => {
+    if (!user || !user.email) return;
+
+    const requestDocRef = doc(db, "solicitudesExamen", docId);
+    const requestData = {
+        ...data,
+        ne: data.ne.toUpperCase().trim(), // Store original NE for reference
+        status: 'pendiente' as const,
+        requestedBy: user.email!,
+        requestedAt: Timestamp.fromDate(new Date()),
+    };
+
+    try {
+        await setDoc(requestDocRef, requestData);
+        toast({
+            title: "Solicitud Enviada",
+            description: `La solicitud para el examen NE: ${docId} ha sido creada.`,
+        });
+        router.push(backLink);
+    } catch (serverError: any) {
+        const permissionError = new FirestorePermissionError({
+            path: requestDocRef.path,
+            operation: 'create',
+            requestResourceData: requestData
+        }, serverError);
+        errorEmitter.emit('permission-error', permissionError);
+    }
+  };
+
+
+  const handleExtraCaseCreation = async () => {
+    if (!extraCaseAlert.data) return;
+    setIsSubmitting(true);
+    setExtraCaseAlert({ isOpen: false, data: null });
+
+    const ne = extraCaseAlert.data.ne.toUpperCase().trim();
+    const q = query(collection(db, "solicitudesExamen"), where("ne", "==", ne));
+
+    try {
+        const snapshot = await getCountFromServer(q);
+        const count = snapshot.data().count;
+        const newDocId = `${ne}-EXT${count + 1}`;
+        await createRequest(newDocId, extraCaseAlert.data);
+    } catch(err) {
+        toast({ title: "Error", description: "No se pudo contar los casos existentes.", variant: "destructive"});
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
   async function onSubmit(data: RequestFormData) {
     if (!user || !user.email) {
-      toast({
-        title: "Error de autenticación",
-        description: "No se pudo identificar al usuario. Por favor, inicie sesión de nuevo.",
-        variant: "destructive",
-      });
+      toast({ title: "Error de autenticación", variant: "destructive" });
       return;
     }
 
     setIsSubmitting(true);
     const ne = data.ne.toUpperCase().trim();
     
-    // Verification logic
     const examDocRef = doc(db, "examenesPrevios", ne);
     const requestDocRef = doc(db, "solicitudesExamen", ne);
 
-    Promise.all([
-        getDoc(examDocRef),
-        getDoc(requestDocRef)
-    ]).then(([examDocSnap, requestDocSnap]) => {
+    try {
+        const [examDocSnap, requestDocSnap] = await Promise.all([
+            getDoc(examDocRef),
+            getDoc(requestDocRef)
+        ]);
+
         if (examDocSnap.exists()) {
-            toast({
-                title: "NE Duplicado",
-                description: `El examen NE: ${ne} ya existe. Use la función de recuperar si desea continuarlo.`,
-                variant: "destructive",
-            });
+            setExtraCaseAlert({ isOpen: true, data });
             setIsSubmitting(false);
             return;
         }
+        
         if (requestDocSnap.exists()) {
             toast({
                 title: "Solicitud Duplicada",
-                description: `Ya existe una solicitud para el NE: ${ne}.`,
+                description: `Ya existe una solicitud pendiente para el NE: ${ne}.`,
                 variant: "destructive",
             });
             setIsSubmitting(false);
             return;
         }
 
-        // If checks pass, proceed to create
-        const requestData = {
-            ...data,
-            ne: ne,
-            status: 'pendiente' as const,
-            requestedBy: user.email!,
-            requestedAt: Timestamp.fromDate(new Date()),
-        };
+        // If no duplicates, create normally
+        await createRequest(ne, data);
 
-        setDoc(requestDocRef, requestData)
-            .then(() => {
-                toast({
-                    title: "Solicitud Enviada",
-                    description: `La solicitud para el examen NE: ${ne} ha sido creada.`,
-                });
-                router.push(backLink);
-            })
-            .catch(async (serverError) => {
-                 const permissionError = new FirestorePermissionError({
-                    path: requestDocRef.path,
-                    operation: 'create',
-                    requestResourceData: requestData
-                } satisfies SecurityRuleContext, serverError);
-                errorEmitter.emit('permission-error', permissionError);
-                setIsSubmitting(false);
-            });
-
-    }).catch(async (serverError) => {
-        // This catch block handles errors from the getDoc calls
+    } catch (serverError: any) {
         const permissionError = new FirestorePermissionError({
-            path: `Verificación de duplicados para NE: ${ne} en examenesPrevios y solicitudesExamen`,
+            path: `Verificación de duplicados para NE: ${ne}`,
             operation: 'get',
         }, serverError);
         errorEmitter.emit('permission-error', permissionError);
-        
         toast({
             title: "Error al Verificar",
-            description: "No se pudo comprobar si el registro ya existe. Verifique sus permisos de lectura.",
+            description: "No se pudo comprobar si el registro ya existe.",
             variant: "destructive",
         });
+    } finally {
         setIsSubmitting(false);
-    });
+    }
   }
 
   return (
+    <>
     <Card className="w-full max-w-3xl mx-auto custom-shadow">
       <CardHeader>
         <CardTitle className="text-2xl font-semibold">Solicitar Nuevo Examen Previo</CardTitle>
@@ -206,5 +239,22 @@ export function RequestForm() {
         </Form>
       </CardContent>
     </Card>
+
+    <AlertDialog open={extraCaseAlert.isOpen} onOpenChange={(isOpen) => setExtraCaseAlert(prev => ({...prev, isOpen}))}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Examen Previo Existente</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Ya existe un examen previo para el NE <span className="font-bold">{extraCaseAlert.data?.ne.toUpperCase()}</span>.
+                    ¿Desea crear una Solicitud Extraordinaria para este NE? Se generará un nuevo ID.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setExtraCaseAlert({ isOpen: false, data: null })}>No, cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleExtraCaseCreation}>Sí, crear solicitud extraordinaria</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
