@@ -164,7 +164,7 @@ export default function SolicitudDetailView({ id, isInlineView, onBackToList, ch
     return (
         <CardContent className="pt-4 print:p-0">
              <div className="hidden print:block">
-                <Image src={`${basePath}/imagenes/HEADERSEXA.svg`} alt="Header Solicitud Detail" width={800} height={100} className="w-full h-auto object-contain" data-ai-hint="company logo banner" priority />
+                <Image src=/AconicExaminer/imagenes/HEADERSEXA.svg} alt="Header Solicitud Detail" width={800} height={100} className="w-full h-auto object-contain" data-ai-hint="company logo banner" priority />
             </div>
              <div className="no-print">
                 <CardHeader className="p-0 mb-4">
@@ -235,7 +235,7 @@ export default function SolicitudDetailView({ id, isInlineView, onBackToList, ch
                 </div>
               </div>
               <div className="hidden print:block">
-                <Image src={`${basePath}/imagenes/FOOTERSOLICITUDETAIL.svg`} alt="Footer Solicitud Detail" width={800} height={100} className="w-full h-auto object-contain mt-6" data-ai-hint="company seal official" priority />
+                <Image src=/AconicExaminer/imagenes/FOOTERSOLICITUDETAIL.svg} alt="Footer Solicitud Detail" width={800} height={100} className="w-full h-auto object-contain mt-6" data-ai-hint="company seal official" priority />
               </div>
               <div className="no-print mt-4 flex justify-end">
                    <Button onClick={handlePrint}>
