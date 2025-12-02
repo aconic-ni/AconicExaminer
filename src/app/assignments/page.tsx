@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, writeBatch, doc, Timestamp, serverTimestamp, deleteDoc } from 'firebase/firestore';
-import type { AppUser, ExamRequest } from '@/types';
+import type { AppUser, ExamRequest, ExamDocument } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import {
@@ -78,7 +78,7 @@ export default function AssignmentsPage() {
     }
   }, [user, authLoading, router]);
 
-  const handleAssign = async (requestId: string, ne: string) => {
+  const handleAssign = async (requestId: string) => {
     const gestorId = selectedGestor[requestId];
     if (!gestorId) {
       toast({ title: "Error de Asignación", description: "Por favor, seleccione un gestor.", variant: "destructive" });
@@ -91,6 +91,14 @@ export default function AssignmentsPage() {
       return;
     }
 
+    const originalRequest = requests.find(r => r.id === requestId);
+    if (!originalRequest) {
+        toast({ title: "Error", description: "No se encontró la solicitud original.", variant: "destructive" });
+        return;
+    }
+
+    const examId = requestId.toUpperCase();
+
     try {
       const batch = writeBatch(db);
 
@@ -102,13 +110,10 @@ export default function AssignmentsPage() {
         assignedAt: serverTimestamp()
       });
 
-      // 2. Create the new exam document
-      const originalRequest = requests.find(r => r.id === requestId);
-      if (!originalRequest) throw new Error("Could not find original request data.");
-
-      const newExamRef = doc(db, "examenesPrevios", ne.toUpperCase());
+      // 2. Create the new exam document using the request ID as the exam ID
+      const newExamRef = doc(db, "examenesPrevios", examId);
       const newExamData: Omit<ExamDocument, 'id'> = {
-        ne: ne.toUpperCase(),
+        ne: examId,
         reference: originalRequest.reference,
         consignee: originalRequest.consignee,
         manager: gestor.displayName || gestor.email || 'N/A', // Assigning manager as the gestor
@@ -129,7 +134,7 @@ export default function AssignmentsPage() {
 
       await batch.commit();
 
-      toast({ title: "Asignación Exitosa", description: `El examen NE: ${ne} fue asignado a ${gestor.displayName}.` });
+      toast({ title: "Asignación Exitosa", description: `El examen NE: ${examId} fue asignado a ${gestor.displayName}.` });
 
       // Refresh data
       fetchData();
@@ -139,6 +144,7 @@ export default function AssignmentsPage() {
       toast({ title: "Error al Asignar", description: "No se pudo completar la asignación. Intente de nuevo.", variant: "destructive" });
     }
   };
+
 
   const handleDelete = async (requestId: string) => {
     try {
@@ -222,7 +228,7 @@ export default function AssignmentsPage() {
                     <TableBody>
                         {requests.map((req) => (
                            <TableRow key={req.id}>
-                               <TableCell className="font-medium">{req.ne}</TableCell>
+                               <TableCell className="font-medium">{req.id}</TableCell>
                                <TableCell>{req.consignee}</TableCell>
                                <TableCell><Badge variant="outline">{req.requestedBy}</Badge></TableCell>
                                <TableCell>{formatTimestamp(req.requestedAt)}</TableCell>
@@ -242,7 +248,7 @@ export default function AssignmentsPage() {
                                </TableCell>
                                <TableCell className="text-right">
                                   <div className="flex justify-end items-center gap-2">
-                                       <Button size="sm" onClick={() => handleAssign(req.id, req.ne)} disabled={!selectedGestor[req.id]}>
+                                       <Button size="sm" onClick={() => handleAssign(req.id)} disabled={!selectedGestor[req.id]}>
                                          Asignar
                                        </Button>
                                        {user.role === 'admin' && (
@@ -256,7 +262,7 @@ export default function AssignmentsPage() {
                                                 <AlertDialogHeader>
                                                     <AlertDialogTitle>¿Está seguro de eliminar esta solicitud?</AlertDialogTitle>
                                                     <AlertDialogDescription>
-                                                        Esta acción no se puede deshacer. La solicitud para el NE <strong>{req.ne}</strong> será eliminada permanentemente.
+                                                        Esta acción no se puede deshacer. La solicitud para el NE <strong>{req.id}</strong> será eliminada permanentemente.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
