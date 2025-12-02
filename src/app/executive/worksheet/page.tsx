@@ -892,8 +892,7 @@ function WorksheetForm() {
                     <FormItem><FormLabel>Observaciones</FormLabel><FormControl><Textarea {...field} placeholder="Añada cualquier observación adicional aquí..."/></FormControl><FormMessage /></FormItem>
                 )}/>
             </div>
-
-            <div className="flex justify-end gap-2 pt-6">
+          <div className="flex justify-end gap-2 pt-6">
                  <Button type="button" variant="outline" asChild>
                     <Link href="/executive"><ArrowLeft className="mr-2 h-4 w-4"/> Volver</Link>
                 </Button>
