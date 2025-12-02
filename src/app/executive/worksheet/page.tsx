@@ -72,7 +72,7 @@ const worksheetSchema = z.object({
   facturaNumber: z.string().min(1, "La factura es requerida. Añádala usando el botón 'Añadir Factura'."),
   grossWeight: z.string().optional(),
   netWeight: z.string().optional(),
-  description: z.string().min(1, "Descripción es requerida."),
+  description: z.string().optional(),
   packageNumber: z.string().optional(),
   entryCustoms: z.string().min(1, "Aduana de entrada es requerida."),
   dispatchCustoms: z.string().min(1, "Aduana de despacho es requerida."),
@@ -604,12 +604,7 @@ function WorksheetForm() {
                         </FormItem>
                      )}/>
                  </div>
-
-                <div className="lg:col-span-3"><FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>Descripción</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
-                <div className="lg:col-span-3"><FormField control={form.control} name="precinto" render={({ field }) => (<FormItem><FormLabel>Precinto</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
-                <div className="lg:col-span-3"><FormField control={form.control} name="precintoLateral" render={({ field }) => (<FormItem><FormLabel>Precinto Lateral</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
-                <div className="lg:col-span-3"><FormField control={form.control} name="vin" render={({ field }) => (<FormItem><FormLabel>VIN</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
-            </div>
+              </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
                 <FormField control={form.control} name="transportMode" render={({ field }) => (
