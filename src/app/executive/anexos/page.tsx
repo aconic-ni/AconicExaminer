@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useState } from 'react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
@@ -202,28 +201,43 @@ function AnexoForm() {
     const neTrimmed = data.ne.trim().toUpperCase();
     const worksheetDocRef = doc(db, 'worksheets', neTrimmed);
     const aforoCaseDocRef = doc(db, 'AforoCases', neTrimmed);
-    
-    const creationTimestamp = Timestamp.now();
-    const worksheetData = { ...data, id: neTrimmed, ne: neTrimmed, createdAt: creationTimestamp, createdBy: user.email!, lastUpdatedAt: creationTimestamp };
-    
-    const aforoCaseData: Partial<AforoCase> = {
-        ne: neTrimmed,
-        executive: data.executive,
-        consignee: data.consignee,
-        facturaNumber: data.facturaNumber,
-        declarationPattern: '',
-        merchandise: data.observations,
-        createdBy: user.uid,
-        createdAt: creationTimestamp,
-        worksheetId: neTrimmed,
-        entregadoAforoAt: creationTimestamp,
-    };
-        
     const batch = writeBatch(db);
-    batch.set(worksheetDocRef, worksheetData);
-    batch.set(aforoCaseDocRef, aforoCaseData);
 
     try {
+        const [worksheetSnap, aforoCaseSnap] = await Promise.all([getDoc(worksheetDocRef), getDoc(aforoCaseDocRef)]);
+        if (worksheetSnap.exists() || aforoCaseSnap.exists()) {
+             toast({ title: "Registro Duplicado", description: `Ya existe un registro con el NE ${neTrimmed}.`, variant: "destructive" });
+             setIsSubmitting(false); return;
+        }
+        
+        const creationTimestamp = Timestamp.now();
+        const createdByInfo = { by: user.displayName, at: creationTimestamp };
+        
+        const worksheetData = { ...data, id: neTrimmed, ne: neTrimmed, createdAt: creationTimestamp, createdBy: user.email!, lastUpdatedAt: creationTimestamp };
+        batch.set(worksheetDocRef, worksheetData);
+
+        const aforoCaseData: Partial<AforoCase> = {
+            ne: neTrimmed, executive: data.executive, consignee: data.consignee, facturaNumber: data.facturaNumber,
+            declarationPattern: '', merchandise: data.observations, createdBy: user.uid, createdAt: creationTimestamp,
+            aforador: data.aforador || '', assignmentDate: data.aforador ? creationTimestamp : null,
+            aforadorStatus: 'Pendiente ', aforadorStatusLastUpdate: createdByInfo, revisorStatus: 'Pendiente', revisorStatusLastUpdate: createdByInfo,
+            preliquidationStatus: 'Pendiente', preliquidationStatusLastUpdate: createdByInfo, digitacionStatus: 'Pendiente', digitacionStatusLastUpdate: createdByInfo,
+            incidentStatus: 'Pendiente', incidentStatusLastUpdate: createdByInfo, revisorAsignado: '', revisorAsignadoLastUpdate: createdByInfo,
+            digitadorAsignado: '', digitadorAsignadoLastUpdate: createdByInfo, worksheetId: neTrimmed, entregadoAforoAt: creationTimestamp,
+        };
+        batch.set(aforoCaseDocRef, aforoCaseData);
+
+        const initialLogRef = doc(collection(aforoCaseDocRef, 'actualizaciones'));
+        const initialLog: AforoCaseUpdate = {
+            updatedAt: Timestamp.now(), updatedBy: user.displayName, field: 'creation', oldValue: null,
+            newValue: `case_created_from_${worksheetType}`, comment: `${worksheetType === 'anexo_5' ? 'Anexo 5' : 'Anexo 7'} ingresado por ${user.displayName}.`,
+        };
+        batch.set(initialLogRef, initialLog);
+
+        if (data.aforador) {
+          setCaseToAssignAforador(aforoCaseData as AforoCase);
+        }
+
         await batch.commit()
         toast({ title: "Registro Creado", description: `El registro para el ${worksheetType.replace('_', ' ')} ${neTrimmed} ha sido guardado.` });
         router.push('/executive');
@@ -231,8 +245,8 @@ function AnexoForm() {
         
     } catch(serverError: any) {
         const permissionError = new FirestorePermissionError({
-            path: `worksheets/${neTrimmed}`, operation: 'create',
-            requestResourceData: { worksheetData: data, aforoCaseData },
+            path: `batch write to worksheets/${neTrimmed} and AforoCases/${neTrimmed}`, operation: 'create',
+            requestResourceData: { worksheetData: data, aforoCaseData: {ne: neTrimmed} },
         }, serverError);
         errorEmitter.emit('permission-error', permissionError);
     } finally {
@@ -388,10 +402,10 @@ function AnexoForm() {
                     <Button type="button" variant="outline" asChild>
                         <Link href="/executive"><ArrowLeft className="mr-2 h-4 w-4"/> Volver</Link>
                     </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Guardar {worksheetType === 'anexo_5' ? 'Anexo 5' : 'Anexo 7'}
-                  </Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Guardar {worksheetType === 'anexo_5' ? 'Anexo 5' : 'Anexo 7'}
+                    </Button>
                 </div>
               </form>
             </Form>
