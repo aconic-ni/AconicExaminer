@@ -65,9 +65,13 @@ export function ExaminerWelcome() {
   };
   
   const handleStartAssigned = async (exam: ExamDocument) => {
+    if (!exam.id) {
+        toast({ title: "Error", description: "El examen seleccionado no tiene un ID válido.", variant: "destructive" });
+        return;
+    }
     setIsLoading(true);
     try {
-        const examDocRef = doc(db, "examenesPrevios", exam.ne.toUpperCase());
+        const examDocRef = doc(db, "examenesPrevios", exam.id);
         // Set creation date when work starts if not already set
         const docSnap = await getDoc(examDocRef);
         if (!docSnap.data()?.createdAt) {
