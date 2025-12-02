@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect } from 'react';
@@ -7,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { anexoDocumentSchema, type AnexoDocumentFormData } from '@/app/executive/anexos/page';
@@ -60,9 +59,9 @@ export function AnexoDocumentModal({ isOpen, onClose, onSave, documentData }: An
     }
   }, [isOpen, documentData, form]);
 
-  const handleSubmit = (data: AnexoDocumentFormData) => {
+  const handleSubmit = form.handleSubmit((data) => {
     onSave(data);
-  };
+  });
 
   if (!isOpen) return null;
 
@@ -71,9 +70,10 @@ export function AnexoDocumentModal({ isOpen, onClose, onSave, documentData }: An
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{documentData ? 'Editar' : 'Añadir'} Descripción de Mercancía</DialogTitle>
+          <DialogDescription className="sr-only">Formulario para añadir o editar los detalles de un producto para el anexo.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)}>
+          <form onSubmit={handleSubmit}>
              <ScrollArea className="max-h-[60vh] p-1">
                 <div className="space-y-4 px-4 py-2">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
