@@ -194,8 +194,14 @@ function AnexoForm() {
 
 
   const onSubmit = async (data: AnexoFormData) => {
-    if (!user || !user.displayName) { toast({ title: 'Error', description: 'Debe estar autenticado.', variant: 'destructive'}); return; }
-    if (!data.ne) { toast({ title: 'Error', description: 'El campo NE no puede estar vacío.', variant: 'destructive'}); return; }
+    if (!user || !user.displayName) {
+      toast({ title: 'Error', description: 'Debe estar autenticado.', variant: 'destructive'});
+      return;
+    }
+    if (!data.ne) {
+      toast({ title: 'Error', description: 'El campo NE no puede estar vacío.', variant: 'destructive'});
+      return;
+    }
     
     setIsSubmitting(true);
     const neTrimmed = data.ne.trim().toUpperCase();
@@ -204,51 +210,73 @@ function AnexoForm() {
     const batch = writeBatch(db);
 
     try {
-        const [worksheetSnap, aforoCaseSnap] = await Promise.all([getDoc(worksheetDocRef), getDoc(aforoCaseDocRef)]);
-        if (worksheetSnap.exists() || aforoCaseSnap.exists()) {
-             toast({ title: "Registro Duplicado", description: `Ya existe un registro con el NE ${neTrimmed}.`, variant: "destructive" });
-             setIsSubmitting(false); return;
-        }
+      const [worksheetSnap, aforoCaseSnap] = await Promise.all([getDoc(worksheetDocRef), getDoc(aforoCaseDocRef)]);
+      if (worksheetSnap.exists() || aforoCaseSnap.exists()) {
+        toast({ title: "Registro Duplicado", description: `Ya existe un registro con el NE ${neTrimmed}.`, variant: "destructive" });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      const creationTimestamp = Timestamp.now();
+      const createdByInfo = { by: user.displayName, at: creationTimestamp };
+      
+      const worksheetData = { ...data, id: neTrimmed, ne: neTrimmed, createdAt: creationTimestamp, createdBy: user.email!, lastUpdatedAt: creationTimestamp };
+      batch.set(worksheetDocRef, worksheetData);
+
+      const aforoCaseData: Partial<AforoCase> = {
+        ne: neTrimmed,
+        executive: data.executive,
+        consignee: data.consignee,
+        facturaNumber: data.facturaNumber,
+        declarationPattern: '',
+        merchandise: data.observations,
+        createdBy: user.uid,
+        createdAt: creationTimestamp,
+        aforador: data.aforador || '',
+        assignmentDate: data.aforador ? creationTimestamp : null,
+        aforadorStatus: 'Pendiente ',
+        aforadorStatusLastUpdate: createdByInfo,
+        revisorStatus: 'Pendiente',
+        revisorStatusLastUpdate: createdByInfo,
+        preliquidationStatus: 'Pendiente',
+        preliquidationStatusLastUpdate: createdByInfo,
+        digitacionStatus: 'Pendiente',
+        digitacionStatusLastUpdate: createdByInfo,
+        incidentStatus: 'Pendiente',
+        incidentStatusLastUpdate: createdByInfo,
+        revisorAsignado: '',
+        revisorAsignadoLastUpdate: createdByInfo,
+        digitadorAsignado: '',
+        digitadorAsignadoLastUpdate: createdByInfo,
+        worksheetId: neTrimmed,
+        entregadoAforoAt: creationTimestamp,
+      };
+      batch.set(aforoCaseDocRef, aforoCaseData);
+
+      const initialLogRef = doc(collection(aforoCaseDocRef, 'actualizaciones'));
+      const initialLog: AforoCaseUpdate = {
+        updatedAt: Timestamp.now(),
+        updatedBy: user.displayName,
+        field: 'creation',
+        oldValue: null,
+        newValue: `case_created_from_${worksheetType}`,
+        comment: `${worksheetType === 'anexo_5' ? 'Anexo 5' : 'Anexo 7'} ingresado por ${user.displayName}.`,
+      };
+      batch.set(initialLogRef, initialLog);
+
+      await batch.commit();
+      toast({ title: "Registro Creado", description: `El registro para el ${worksheetType.replace('_', ' ')} ${neTrimmed} ha sido guardado.` });
+      router.push('/executive');
+      form.reset();
         
-        const creationTimestamp = Timestamp.now();
-        const createdByInfo = { by: user.displayName, at: creationTimestamp };
-        
-        const worksheetData = { ...data, id: neTrimmed, ne: neTrimmed, createdAt: creationTimestamp, createdBy: user.email!, lastUpdatedAt: creationTimestamp };
-        batch.set(worksheetDocRef, worksheetData);
-
-        const aforoCaseData: Partial<AforoCase> = {
-            ne: neTrimmed, executive: data.executive, consignee: data.consignee, facturaNumber: data.facturaNumber,
-            declarationPattern: '', merchandise: data.observations, createdBy: user.uid, createdAt: creationTimestamp,
-            aforador: data.aforador || '', assignmentDate: data.aforador ? creationTimestamp : null,
-            aforadorStatus: 'Pendiente ', aforadorStatusLastUpdate: createdByInfo, revisorStatus: 'Pendiente', revisorStatusLastUpdate: createdByInfo,
-            preliquidationStatus: 'Pendiente', preliquidationStatusLastUpdate: createdByInfo, digitacionStatus: 'Pendiente', digitacionStatusLastUpdate: createdByInfo,
-            incidentStatus: 'Pendiente', incidentStatusLastUpdate: createdByInfo, revisorAsignado: '', revisorAsignadoLastUpdate: createdByInfo,
-            digitadorAsignado: '', digitadorAsignadoLastUpdate: createdByInfo, worksheetId: neTrimmed, entregadoAforoAt: creationTimestamp,
-        };
-        batch.set(aforoCaseDocRef, aforoCaseData);
-
-        const initialLogRef = doc(collection(aforoCaseDocRef, 'actualizaciones'));
-        const initialLog: AforoCaseUpdate = {
-            updatedAt: Timestamp.now(), updatedBy: user.displayName, field: 'creation', oldValue: null,
-            newValue: `case_created_from_${worksheetType}`, comment: `${worksheetType === 'anexo_5' ? 'Anexo 5' : 'Anexo 7'} ingresado por ${user.displayName}.`,
-        };
-        batch.set(initialLogRef, initialLog);
-
-        if (data.aforador) {
-          setCaseToAssignAforador(aforoCaseData as AforoCase);
-        }
-
-        await batch.commit()
-        toast({ title: "Registro Creado", description: `El registro para el ${worksheetType.replace('_', ' ')} ${neTrimmed} ha sido guardado.` });
-        router.push('/executive');
-        form.reset();
-        
-    } catch(serverError: any) {
-        const permissionError = new FirestorePermissionError({
-            path: `batch write to worksheets/${neTrimmed} and AforoCases/${neTrimmed}`, operation: 'create',
-            requestResourceData: { worksheetData: data, aforoCaseData: {ne: neTrimmed} },
-        }, serverError);
-        errorEmitter.emit('permission-error', permissionError);
+    } catch (serverError: any) {
+      console.error("Error creating record:", serverError);
+      const permissionError = new FirestorePermissionError({
+        path: `batch write to worksheets/${neTrimmed} and AforoCases/${neTrimmed}`,
+        operation: 'create',
+        requestResourceData: { worksheetData: data, aforoCaseData: { ne: neTrimmed } },
+      }, serverError);
+      errorEmitter.emit('permission-error', permissionError);
     } finally {
       setIsSubmitting(false);
     }
@@ -256,167 +284,167 @@ function AnexoForm() {
 
   return (
     <>
-    <Card className="w-full max-w-screen-2xl mx-auto">
+      <Card className="w-full max-w-screen-2xl mx-auto">
         <CardHeader>
             <CardTitle className="text-2xl">{worksheetType === 'anexo_5' ? 'Anexo 5' : 'Anexo 7'}: Nota de Traslado</CardTitle>
             <CardDescription>Complete la información para generar el nuevo anexo.</CardDescription>
         </CardHeader>
         <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <FormField control={form.control} name="ne" render={({ field }) => (<FormItem><FormLabel>NE</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="consignee" render={({ field }) => (<FormItem><FormLabel>Empresa que solicita (Consignatario)</FormLabel><FormControl><ConsigneeSelector value={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="ruc" render={({ field }) => (<FormItem><FormLabel>RUC</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="resa" render={({ field }) => (<FormItem><FormLabel>RESA No</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="facturaNumber" render={({ field }) => (<FormItem><FormLabel>Factura No</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                     <FormField
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <FormField control={form.control} name="ne" render={({ field }) => (<FormItem><FormLabel>NE</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name="consignee" render={({ field }) => (<FormItem><FormLabel>Empresa que solicita (Consignatario)</FormLabel><FormControl><ConsigneeSelector value={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name="ruc" render={({ field }) => (<FormItem><FormLabel>RUC</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name="resa" render={({ field }) => (<FormItem><FormLabel>RESA No</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name="facturaNumber" render={({ field }) => (<FormItem><FormLabel>Factura No</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                 <FormField
+                    control={form.control}
+                    name="dispatchCustoms"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Delegación de Aduana Destino</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar aduana..." /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {aduanas.map(aduana => <SelectItem key={aduana.value} value={aduana.value}>{aduana.label}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        <FormMessage />
+                    </FormItem>
+                 )}/>
+              </div>
+
+              <div className="pt-4 border-t">
+                <h3 className="text-lg font-medium mb-2">Descripción de las mercancías</h3>
+                <div className="rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Cantidad</TableHead><TableHead>Origen</TableHead><TableHead>UM</TableHead>
+                                <TableHead>SAC</TableHead><TableHead>Peso</TableHead>
+                                <TableHead>Descripción</TableHead>
+                                <TableHead>Linea Aerea</TableHead><TableHead>N° Guia Aerea</TableHead><TableHead>Bulto</TableHead>
+                                <TableHead>Total (US$)</TableHead>
+                                <TableHead className="text-right">Acciones</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {docFields.map((field, index) => (
+                                <TableRow key={field.id}>
+                                    <TableCell>{field.cantidad}</TableCell>
+                                    <TableCell>{field.origen}</TableCell>
+                                    <TableCell>{field.um}</TableCell>
+                                    <TableCell>{field.sac}</TableCell>
+                                    <TableCell>{field.peso}</TableCell>
+                                    <TableCell className="max-w-xs truncate">{field.descripcion}</TableCell>
+                                    <TableCell>{field.linea}</TableCell>
+                                    <TableCell>{field.guia}</TableCell>
+                                    <TableCell>{field.bulto}</TableCell>
+                                    <TableCell>{field.total?.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex gap-1 justify-end">
+                                            <Button type="button" variant="ghost" size="icon" onClick={() => handleOpenModal(field as AnexoDocumentFormData)}>
+                                                <Edit className="h-4 w-4 text-blue-600"/>
+                                            </Button>
+                                            <Button type="button" variant="ghost" size="icon" onClick={() => removeDoc(index)}>
+                                                <Trash2 className="h-4 w-4 text-destructive"/>
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+                <Button type="button" onClick={() => handleOpenModal()} size="sm" variant="outline" className="mt-2"><PlusCircle className="mr-2 h-4 w-4"/>Añadir Fila</Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField control={form.control} name="cantidadTotal" render={({ field }) => (<FormItem><FormLabel>Cantidad Total</FormLabel><FormControl><Input placeholder="Cantidad" {...field} readOnly className="bg-muted/50" /></FormControl></FormItem>)} />
+                      <FormField control={form.control} name="unidadMedidaTotal" render={({ field }) => (<FormItem><FormLabel>Unidad</FormLabel><FormControl><Input placeholder="Unidad" {...field} /></FormControl></FormItem>)} />
+                    </div>
+                    <FormField control={form.control} name="observations" render={({ field }) => (<FormItem><FormLabel>Nota</FormLabel><FormControl><Textarea rows={8} {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                </div>
+                 <div className="space-y-4">
+                     <div className="space-y-2">
+                        <Label>Valor Total (USD)</Label>
+                        <p className="text-2xl font-bold p-2 bg-muted rounded-md">${totalSum.toFixed(2)}</p>
+                    </div>
+                    <FormField control={form.control} name="packageNumber" render={({ field }) => (<FormItem><FormLabel>Bultos Totales</FormLabel><FormControl><Input {...field} readOnly className="bg-muted/50" /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="grossWeight" render={({ field }) => (<FormItem><FormLabel>Peso Total</FormLabel><FormControl><Input {...field} readOnly className="bg-muted/50"/></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="precinto" render={({ field }) => (<FormItem><FormLabel>Precinto</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="precintoLateral" render={({ field }) => (<FormItem><FormLabel>Precinto Lateral</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Conformación de Valor</h4>
+                        <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
+                           <FormField control={form.control} name="valor" render={({ field }) => (<FormItem><FormLabel>Valor $</FormLabel><FormControl><Input type="number" step="0.01" {...field} readOnly className="bg-muted/50" /></FormControl><FormMessage /></FormItem>)}/>
+                           <FormField control={form.control} name="flete" render={({ field }) => (<FormItem><FormLabel>Flete $</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                           <FormField control={form.control} name="seguro" render={({ field }) => (<FormItem><FormLabel>Seguro $</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                           <FormField control={form.control} name="otrosGastos" render={({ field }) => (<FormItem><FormLabel>O. Gastó $</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                        </div>
+                    </div>
+                </div>
+              </div>
+
+
+              <div className="pt-4 border-t">
+                <h3 className="text-lg font-medium mb-2">Datos de Transporte</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <FormField control={form.control} name="codigoAduanero" render={({ field }) => (<FormItem><FormLabel>Código de Aduanero</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="marcaVehiculo" render={({ field }) => (<FormItem><FormLabel>Marca</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="placaVehiculo" render={({ field }) => (<FormItem><FormLabel>Placa</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="motorVehiculo" render={({ field }) => (<FormItem><FormLabel>Motor</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="chasisVehiculo" render={({ field }) => (<FormItem><FormLabel>Chasis</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="vin" render={({ field }) => (<FormItem><FormLabel>VIN</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="nombreConductor" render={({ field }) => (<FormItem><FormLabel>Nombre Conductor</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="licenciaConductor" render={({ field }) => (<FormItem><FormLabel>Licencia</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="cedulaConductor" render={({ field }) => (<FormItem><FormLabel>Cédula</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="tipoMedio" render={({ field }) => (<FormItem><FormLabel>Tipo de medio</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="pesoVacioVehiculo" render={({ field }) => (<FormItem><FormLabel>Peso Vacío</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField
                         control={form.control}
-                        name="dispatchCustoms"
+                        name="aforador"
                         render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                            <FormLabel>Delegación de Aduana Destino</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar aduana..." /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        {aduanas.map(aduana => <SelectItem key={aduana.value} value={aduana.value}>{aduana.label}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                        <FormItem>
+                            <FormLabel>Agente Aduanero</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar agente..." /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="-">- Ninguno -</SelectItem>
+                                    {agentesAduaneros.map(agente => (
+                                        <SelectItem key={agente.uid} value={agente.displayName || ''}>
+                                            {agente.displayName} ({agente.agentLicense})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                             <FormMessage />
                         </FormItem>
                      )}/>
-                  </div>
-
-                <div className="pt-4 border-t">
-                    <h3 className="text-lg font-medium mb-2">Descripción de las mercancías</h3>
-                    <div className="rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Cantidad</TableHead><TableHead>Origen</TableHead><TableHead>UM</TableHead>
-                                    <TableHead>SAC</TableHead><TableHead>Peso</TableHead>
-                                    <TableHead>Descripción</TableHead>
-                                    <TableHead>Linea Aerea</TableHead><TableHead>N° Guia Aerea</TableHead><TableHead>Bulto</TableHead>
-                                    <TableHead>Total (US$)</TableHead>
-                                    <TableHead className="text-right">Acciones</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {docFields.map((field, index) => (
-                                    <TableRow key={field.id}>
-                                        <TableCell>{field.cantidad}</TableCell>
-                                        <TableCell>{field.origen}</TableCell>
-                                        <TableCell>{field.um}</TableCell>
-                                        <TableCell>{field.sac}</TableCell>
-                                        <TableCell>{field.peso}</TableCell>
-                                        <TableCell className="max-w-xs truncate">{field.descripcion}</TableCell>
-                                        <TableCell>{field.linea}</TableCell>
-                                        <TableCell>{field.guia}</TableCell>
-                                        <TableCell>{field.bulto}</TableCell>
-                                        <TableCell>{field.total?.toFixed(2)}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex gap-1 justify-end">
-                                                <Button type="button" variant="ghost" size="icon" onClick={() => handleOpenModal(field as AnexoDocumentFormData)}>
-                                                    <Edit className="h-4 w-4 text-blue-600"/>
-                                                </Button>
-                                                <Button type="button" variant="ghost" size="icon" onClick={() => removeDoc(index)}>
-                                                    <Trash2 className="h-4 w-4 text-destructive"/>
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                    <Button type="button" onClick={() => handleOpenModal()} size="sm" variant="outline" className="mt-2"><PlusCircle className="mr-2 h-4 w-4"/>Añadir Fila</Button>
                 </div>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField control={form.control} name="cantidadTotal" render={({ field }) => (<FormItem><FormLabel>Cantidad Total</FormLabel><FormControl><Input placeholder="Cantidad" {...field} readOnly className="bg-muted/50" /></FormControl></FormItem>)} />
-                          <FormField control={form.control} name="unidadMedidaTotal" render={({ field }) => (<FormItem><FormLabel>Unidad</FormLabel><FormControl><Input placeholder="Unidad" {...field} /></FormControl></FormItem>)} />
-                        </div>
-                        <FormField control={form.control} name="observations" render={({ field }) => (<FormItem><FormLabel>Nota</FormLabel><FormControl><Textarea rows={8} {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    </div>
-                     <div className="space-y-4">
-                         <div className="space-y-2">
-                            <Label>Valor Total (USD)</Label>
-                            <p className="text-2xl font-bold p-2 bg-muted rounded-md">${totalSum.toFixed(2)}</p>
-                        </div>
-                        <FormField control={form.control} name="packageNumber" render={({ field }) => (<FormItem><FormLabel>Bultos Totales</FormLabel><FormControl><Input {...field} readOnly className="bg-muted/50" /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="grossWeight" render={({ field }) => (<FormItem><FormLabel>Peso Total</FormLabel><FormControl><Input {...field} readOnly className="bg-muted/50"/></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="precinto" render={({ field }) => (<FormItem><FormLabel>Precinto</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="precintoLateral" render={({ field }) => (<FormItem><FormLabel>Precinto Lateral</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <div className="space-y-2">
-                            <h4 className="font-medium text-sm">Conformación de Valor</h4>
-                            <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
-                               <FormField control={form.control} name="valor" render={({ field }) => (<FormItem><FormLabel>Valor $</FormLabel><FormControl><Input type="number" step="0.01" {...field} readOnly className="bg-muted/50" /></FormControl><FormMessage /></FormItem>)}/>
-                               <FormField control={form.control} name="flete" render={({ field }) => (<FormItem><FormLabel>Flete $</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                               <FormField control={form.control} name="seguro" render={({ field }) => (<FormItem><FormLabel>Seguro $</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                               <FormField control={form.control} name="otrosGastos" render={({ field }) => (<FormItem><FormLabel>O. Gastó $</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+              </div>
 
-
-                <div className="pt-4 border-t">
-                    <h3 className="text-lg font-medium mb-2">Datos de Transporte</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <FormField control={form.control} name="codigoAduanero" render={({ field }) => (<FormItem><FormLabel>Código de Aduanero</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="marcaVehiculo" render={({ field }) => (<FormItem><FormLabel>Marca</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="placaVehiculo" render={({ field }) => (<FormItem><FormLabel>Placa</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="motorVehiculo" render={({ field }) => (<FormItem><FormLabel>Motor</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="chasisVehiculo" render={({ field }) => (<FormItem><FormLabel>Chasis</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="vin" render={({ field }) => (<FormItem><FormLabel>VIN</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="nombreConductor" render={({ field }) => (<FormItem><FormLabel>Nombre Conductor</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="licenciaConductor" render={({ field }) => (<FormItem><FormLabel>Licencia</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="cedulaConductor" render={({ field }) => (<FormItem><FormLabel>Cédula</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="tipoMedio" render={({ field }) => (<FormItem><FormLabel>Tipo de medio</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="pesoVacioVehiculo" render={({ field }) => (<FormItem><FormLabel>Peso Vacío</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                        <FormField
-                            control={form.control}
-                            name="aforador"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Agente Aduanero</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar agente..." /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="-">- Ninguno -</SelectItem>
-                                        {agentesAduaneros.map(agente => (
-                                            <SelectItem key={agente.uid} value={agente.displayName || ''}>
-                                                {agente.displayName} ({agente.agentLicense})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                         )}/>
-                    </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-6">
-                    <Button type="button" variant="outline" asChild>
-                        <Link href="/executive"><ArrowLeft className="mr-2 h-4 w-4"/> Volver</Link>
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Guardar {worksheetType === 'anexo_5' ? 'Anexo 5' : 'Anexo 7'}
-                    </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-    </Card>
-    <AnexoDocumentModal
+              <div className="flex justify-end gap-2 pt-6">
+                <Button type="button" variant="outline" asChild>
+                    <Link href="/executive"><ArrowLeft className="mr-2 h-4 w-4"/> Volver</Link>
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Guardar {worksheetType === 'anexo_5' ? 'Anexo 5' : 'Anexo 7'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+      <AnexoDocumentModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveDocument}
         documentData={editingDocument}
-    />
+      />
     </>
   )
 }
