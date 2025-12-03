@@ -97,8 +97,8 @@ export const Anexo5Details: React.FC<{ worksheet: Worksheet; onClose: () => void
   const valorAduanero = (worksheet.valor || 0) + (worksheet.flete || 0) + (worksheet.seguro || 0) + (worksheet.otrosGastos || 0);
 
   const headerImageSrc = worksheet.worksheetType === 'anexo_7' 
-    ? "/imagenes/HEADERANEX7DETAIL.svg" 
-    : "/imagenes/HEADERANEX5DETAIL.svg";
+    ? "/AconicExaminer/imagenes/HEADERANEX7DETAIL.svg" 
+    : "/AconicExaminer/imagenes/HEADERANEX5DETAIL.svg";
 
   const signatureText = worksheet.worksheetType === 'anexo_7' 
     ? "CONTROL DE RECINTO ADUANERO"
