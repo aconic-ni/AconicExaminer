@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { X, Printer, FileText, User, Building, Weight, Truck, MapPin, Anchor, Plane, Globe, Package, ListChecks, FileSymlink, Link as LinkIcon, Eye, Shield, FileBadge, FileKey } from 'lucide-react';
+import { X, Printer, FileText, User, Building, Weight, Truck, MapPin, Anchor, Plane, Globe, Package, ListChecks, FileSymlink, Link as LinkIcon, Eye, Shield, FileBadge, FileKey, Edit } from 'lucide-react';
 import type { Worksheet, AppUser } from '@/types';
 import { Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,6 +14,7 @@ import { aduanas } from '@/lib/formData';
 import { WorksheetDetails } from '../WorksheetDetails';
 import { cn } from "@/lib/utils";
 import { db } from '@/lib/firebase';
+import Link from 'next/link';
 
 const formatShortDate = (timestamp: Timestamp | null | undefined): string => {
   if (!timestamp) return 'N/A';
@@ -143,8 +144,8 @@ export const Anexo5Details: React.FC<{ worksheet: Worksheet; onClose: () => void
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {(worksheet.documents || []).length > 0 ? (
-                        (worksheet.documents || []).map(doc => (
+                    {worksheet.documents && worksheet.documents.length > 0 ? (
+                        worksheet.documents.map(doc => (
                             <TableRow key={doc.id}>
                                 <TableCell className="print:p-1 print:text-[8pt]">{doc.cantidad || ''}</TableCell>
                                 <TableCell className="print:p-1 print:text-[8pt]">{doc.origen || ''}</TableCell>
@@ -258,6 +259,11 @@ export const Anexo5Details: React.FC<{ worksheet: Worksheet; onClose: () => void
 
       </div>
        <CardFooter className="justify-end gap-2 no-print border-t pt-4">
+          <Button asChild variant="outline">
+            <Link href={`/executive/anexos?type=${worksheet.worksheetType}&id=${worksheet.id}`}>
+              <Edit className="mr-2 h-4 w-4" /> Editar
+            </Link>
+          </Button>
           <Button type="button" onClick={onClose} variant="outline">Cerrar</Button>
           <Button type="button" onClick={handlePrint} variant="default">
             <Printer className="mr-2 h-4 w-4" /> Imprimir
