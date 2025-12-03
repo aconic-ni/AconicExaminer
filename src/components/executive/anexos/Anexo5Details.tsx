@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
@@ -92,23 +91,13 @@ export const Anexo5Details: React.FC<{ worksheet: Worksheet; onClose: () => void
     return (worksheet.documents || []).reduce((sum, doc) => sum + (Number((doc as any).total) || 0), 0);
   }, [worksheet.documents]);
 
-  const numProducts = worksheet.documents?.length || 0;
-  let numEmptyRows = 0;
-    if (numProducts > 1) { 
-        numEmptyRows = Math.max(0, 5 - numProducts);
-    } else if (numProducts === 1) {
-        numEmptyRows = 0;
-    } else {
-        numEmptyRows = 5;
-    }
-
   const selectedAgent = agentesAduaneros.find(agent => agent.displayName === worksheet.aforador);
   
   const valorAduanero = (worksheet.valor || 0) + (worksheet.flete || 0) + (worksheet.seguro || 0) + (worksheet.otrosGastos || 0);
 
   const headerImageSrc = worksheet.worksheetType === 'anexo_7' 
-    ? "/AconicExaminer/imagenes/HEADERANEX7DETAIL.svg" 
-    : "/AconicExaminer/imagenes/HEADERANEX5DETAIL.svg";
+    ? "/imagenes/HEADERANEX7DETAIL.svg" 
+    : "/imagenes/HEADERANEX5DETAIL.svg";
 
   const signatureText = worksheet.worksheetType === 'anexo_7' 
     ? "CONTROL DE RECINTO ADUANERO"
@@ -154,23 +143,28 @@ export const Anexo5Details: React.FC<{ worksheet: Worksheet; onClose: () => void
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {(worksheet.documents || []).map(doc => (
-                        <TableRow key={doc.id}>
-                            <TableCell className="print:p-1 print:text-[8pt]">{doc.cantidad || ''}</TableCell>
-                            <TableCell className="print:p-1 print:text-[8pt]">{doc.origen || ''}</TableCell>
-                            <TableCell className="print:p-1 print:text-[8pt]">{doc.um || ''}</TableCell>
-                            <TableCell className="print:p-1 print:text-[8pt]">{doc.sac || ''}</TableCell>
-                            <TableCell className="print:p-1 print:text-[8pt]">{doc.peso || ''}</TableCell>
-                            <TableCell className="print:p-1 print:text-[8pt]">{doc.descripcion}</TableCell>
-                            <TableCell className="print:p-1 print:text-[8pt]">{doc.linea || ''}</TableCell>
-                            <TableCell className="print:p-1 print:text-[8pt]">{doc.guia || ''}</TableCell>
-                            <TableCell className="print:p-1 print:text-[8pt]">{doc.bulto || ''}</TableCell>
-                            <TableCell className="print:p-1 print:text-[8pt]">{doc.total ? (doc.total as number).toFixed(2) : ''}</TableCell>
+                    {(worksheet.documents || []).length > 0 ? (
+                        (worksheet.documents || []).map(doc => (
+                            <TableRow key={doc.id}>
+                                <TableCell className="print:p-1 print:text-[8pt]">{doc.cantidad || ''}</TableCell>
+                                <TableCell className="print:p-1 print:text-[8pt]">{doc.origen || ''}</TableCell>
+                                <TableCell className="print:p-1 print:text-[8pt]">{doc.um || ''}</TableCell>
+                                <TableCell className="print:p-1 print:text-[8pt]">{doc.sac || ''}</TableCell>
+                                <TableCell className="print:p-1 print:text-[8pt]">{doc.peso || ''}</TableCell>
+                                <TableCell className="print:p-1 print:text-[8pt]">{doc.descripcion}</TableCell>
+                                <TableCell className="print:p-1 print:text-[8pt]">{doc.linea || ''}</TableCell>
+                                <TableCell className="print:p-1 print:text-[8pt]">{doc.guia || ''}</TableCell>
+                                <TableCell className="print:p-1 print:text-[8pt]">{doc.bulto || ''}</TableCell>
+                                <TableCell className="print:p-1 print:text-[8pt]">{doc.total ? (doc.total as number).toFixed(2) : ''}</TableCell>
+                            </TableRow>
+                        ))
+                    ) : (
+                        <TableRow>
+                            <TableCell colSpan={productHeaders.length} className="h-24 text-center">
+                                No hay productos en este anexo.
+                            </TableCell>
                         </TableRow>
-                    ))}
-                    {Array.from({ length: numEmptyRows }).map((_, i) => (
-                        <TableRow key={`placeholder-${i}`}><TableCell colSpan={productHeaders.length} className="h-8 print:h-6">&nbsp;</TableCell></TableRow>
-                    ))}
+                    )}
                 </TableBody>
             </Table>
         </div>
@@ -208,8 +202,10 @@ export const Anexo5Details: React.FC<{ worksheet: Worksheet; onClose: () => void
                       <TransportDetailItem label="Precinto Lateral Fijo" value={worksheet.precintoLateral} />
                     )}
                 </div>
-                <SignatureSection title="Firma Inspector ACCA" className="mt-2 print:mt-1">
-                </SignatureSection>
+                {worksheet.worksheetType === 'anexo_5' && (
+                    <SignatureSection title="Firma Inspector ACCA" className="mt-2 print:mt-1">
+                    </SignatureSection>
+                )}
             </div>
         </div>
 
