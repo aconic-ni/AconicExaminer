@@ -6,28 +6,21 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, setDoc, serverTimestamp, getDoc, writeBatch, collection, addDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDoc, writeBatch, collection, addDoc, Timestamp, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import { X, Loader2, PlusCircle, Trash2, CheckSquare, Square, Receipt, Check, ChevronsUpDown, RotateCcw, ArrowLeft, Edit } from 'lucide-react';
-import type { AforoCase, AforoCaseUpdate, RequiredPermit, DocumentStatus, Worksheet, AppUser, WorksheetDocument } from '@/types';
+import { X, Loader2, PlusCircle, Trash2, ArrowLeft, Edit } from 'lucide-react';
+import type { AforoCase, AforoCaseUpdate, Worksheet, AppUser } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { aduanas, aduanaToShortCode, permitOptions, tiposDeclaracion } from '@/lib/formData';
-import { Badge } from '@/components/ui/badge';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { cn } from '@/lib/utils';
+import { aduanas } from '@/lib/formData';
 import { ConsigneeSelector } from '@/components/shared/ConsigneeSelector';
-import { useAppContext } from '@/context/AppContext';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { AppShell } from '@/components/layout/AppShell';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -96,12 +89,29 @@ function AnexoForm() {
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [agentesAduaneros, setAgentesAduaneros] = useState<AppUser[]>([]);
-  const { setCaseToAssignAforador } = useAppContext();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState<AnexoDocumentFormData | null>(null);
+  const [editingWorksheetId, setEditingWorksheetId] = useState<string | null>(null);
 
   const worksheetType = (searchParams.get('type') as 'anexo_5' | 'anexo_7') || 'anexo_5';
+  
+  useEffect(() => {
+    const id = searchParams.get('id');
+    if (id) {
+      setEditingWorksheetId(id);
+      const fetchWorksheet = async () => {
+        const wsDocRef = doc(db, 'worksheets', id);
+        const wsSnap = await getDoc(wsDocRef);
+        if (wsSnap.exists()) {
+          form.reset(wsSnap.data() as AnexoFormData);
+        } else {
+          toast({ title: 'Error', description: 'No se encontró el anexo para editar.', variant: 'destructive'});
+        }
+      };
+      fetchWorksheet();
+    }
+  }, [searchParams]);
 
 
   const form = useForm<AnexoFormData>({
@@ -117,7 +127,7 @@ function AnexoForm() {
     },
   });
   
-  const { fields: docFields, append: appendDoc, remove: removeDoc, update: updateDoc } = useFieldArray({
+  const { fields: docFields, append: appendDoc, remove: removeDoc, update: updateDocField } = useFieldArray({
     control: form.control, name: "documents",
   });
   
@@ -155,20 +165,20 @@ function AnexoForm() {
   }, [pesoTotalSum, form]);
 
   useEffect(() => {
-    if (user?.displayName) {
+    if (user?.displayName && !editingWorksheetId) {
       form.setValue('executive', user.displayName);
     }
     form.setValue('worksheetType', worksheetType);
-  }, [user, form, worksheetType]);
+  }, [user, form, worksheetType, editingWorksheetId]);
   
   useEffect(() => {
     const fetchAgents = async () => {
-        const q = query(collection(db, 'users'), where('role', '==', 'agente'));
+        const q = query(collection(db, 'users'), where('roleTitle', '==', 'agente aduanero'));
         const querySnapshot = await getDocs(q);
         const agents = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser));
         
         const completeAgents = agents.filter(agent => 
-            agent.displayName && agent.agentLicense && agent.cedula && agent.roleTitle
+            agent.displayName && agent.agentLicense && agent.cedula
         );
         setAgentesAduaneros(completeAgents);
     };
@@ -184,7 +194,7 @@ function AnexoForm() {
   const handleSaveDocument = (data: AnexoDocumentFormData) => {
     const existingIndex = docFields.findIndex(field => field.id === data.id);
     if (existingIndex > -1) {
-        updateDoc(existingIndex, data);
+        updateDocField(existingIndex, data);
     } else {
         appendDoc(data);
     }
@@ -204,81 +214,128 @@ function AnexoForm() {
     }
     
     setIsSubmitting(true);
-    const neTrimmed = data.ne.trim().toUpperCase();
-    const worksheetDocRef = doc(db, 'worksheets', neTrimmed);
-    const aforoCaseDocRef = doc(db, 'AforoCases', neTrimmed);
-    const batch = writeBatch(db);
 
-    try {
-      const [worksheetSnap, aforoCaseSnap] = await Promise.all([getDoc(worksheetDocRef), getDoc(aforoCaseDocRef)]);
-      if (worksheetSnap.exists() || aforoCaseSnap.exists()) {
-        toast({ title: "Registro Duplicado", description: `Ya existe un registro con el NE ${neTrimmed}.`, variant: "destructive" });
-        setIsSubmitting(false);
-        return;
-      }
-      
-      const creationTimestamp = Timestamp.now();
-      const createdByInfo = { by: user.displayName, at: creationTimestamp };
-      
-      const worksheetData = { ...data, id: neTrimmed, ne: neTrimmed, createdAt: creationTimestamp, createdBy: user.email!, lastUpdatedAt: creationTimestamp };
-      batch.set(worksheetDocRef, worksheetData);
+    if (editingWorksheetId) {
+      // Update existing record
+      const worksheetDocRef = doc(db, 'worksheets', editingWorksheetId);
+      const aforoCaseDocRef = doc(db, 'AforoCases', editingWorksheetId);
+      const batch = writeBatch(db);
 
-      const aforoCaseData: Partial<AforoCase> = {
-        ne: neTrimmed,
-        executive: data.executive,
-        consignee: data.consignee,
-        facturaNumber: data.facturaNumber,
-        declarationPattern: '',
-        merchandise: data.observations,
-        createdBy: user.uid,
-        createdAt: creationTimestamp,
-        aforador: data.aforador || '',
-        assignmentDate: data.aforador ? creationTimestamp : null,
-        aforadorStatus: 'Pendiente ',
-        aforadorStatusLastUpdate: createdByInfo,
-        revisorStatus: 'Pendiente',
-        revisorStatusLastUpdate: createdByInfo,
-        preliquidationStatus: 'Pendiente',
-        preliquidationStatusLastUpdate: createdByInfo,
-        digitacionStatus: 'Pendiente',
-        digitacionStatusLastUpdate: createdByInfo,
-        incidentStatus: 'Pendiente',
-        incidentStatusLastUpdate: createdByInfo,
-        revisorAsignado: '',
-        revisorAsignadoLastUpdate: createdByInfo,
-        digitadorAsignado: '',
-        digitadorAsignadoLastUpdate: createdByInfo,
-        worksheetId: neTrimmed,
-        entregadoAforoAt: creationTimestamp,
-      };
-      batch.set(aforoCaseDocRef, aforoCaseData);
+      try {
+        const updatedWorksheetData = { ...data, lastUpdatedAt: Timestamp.now() };
+        batch.update(worksheetDocRef, updatedWorksheetData);
+        batch.update(aforoCaseDocRef, {
+            executive: data.executive,
+            consignee: data.consignee,
+            facturaNumber: data.facturaNumber,
+            merchandise: data.observations,
+            aforador: data.aforador || '',
+        });
 
-      const initialLogRef = doc(collection(aforoCaseDocRef, 'actualizaciones'));
-      const initialLog: AforoCaseUpdate = {
-        updatedAt: Timestamp.now(),
-        updatedBy: user.displayName,
-        field: 'creation',
-        oldValue: null,
-        newValue: `case_created_from_${worksheetType}`,
-        comment: `${worksheetType === 'anexo_5' ? 'Anexo 5' : 'Anexo 7'} ingresado por ${user.displayName}.`,
-      };
-      batch.set(initialLogRef, initialLog);
-
-      await batch.commit();
-      toast({ title: "Registro Creado", description: `El registro para el ${worksheetType.replace('_', ' ')} ${neTrimmed} ha sido guardado.` });
-      router.push('/executive');
-      form.reset();
+        const logRef = doc(collection(aforoCaseDocRef, 'actualizaciones'));
+        const updateLog: AforoCaseUpdate = {
+          updatedAt: Timestamp.now(),
+          updatedBy: user.displayName,
+          field: 'document_update',
+          oldValue: `Anexo ${worksheetType === 'anexo_5' ? '5' : '7'}`,
+          newValue: `Anexo ${worksheetType === 'anexo_5' ? '5' : '7'} actualizado`,
+          comment: `Anexo fue modificado por ${user.displayName}.`,
+        };
+        batch.set(logRef, updateLog);
         
-    } catch (serverError: any) {
-      console.error("Error creating record:", serverError);
-      const permissionError = new FirestorePermissionError({
-        path: `batch write to worksheets/${neTrimmed} and AforoCases/${neTrimmed}`,
-        operation: 'create',
-        requestResourceData: { worksheetData: data, aforoCaseData: { ne: neTrimmed } },
-      }, serverError);
-      errorEmitter.emit('permission-error', permissionError);
-    } finally {
-      setIsSubmitting(false);
+        await batch.commit();
+        toast({ title: "Anexo Actualizado", description: `El anexo ${editingWorksheetId} ha sido actualizado.` });
+        router.push('/executive');
+
+      } catch(serverError: any) {
+         const permissionError = new FirestorePermissionError({
+          path: `batch update to worksheets/${editingWorksheetId} and AforoCases/${editingWorksheetId}`,
+          operation: 'update',
+          requestResourceData: { worksheetData: data },
+        }, serverError);
+        errorEmitter.emit('permission-error', permissionError);
+      } finally {
+        setIsSubmitting(false);
+      }
+
+    } else {
+      // Create new record
+      const neTrimmed = data.ne.trim().toUpperCase();
+      const worksheetDocRef = doc(db, 'worksheets', neTrimmed);
+      const aforoCaseDocRef = doc(db, 'AforoCases', neTrimmed);
+      const batch = writeBatch(db);
+
+      try {
+        const [worksheetSnap, aforoCaseSnap] = await Promise.all([getDoc(worksheetDocRef), getDoc(aforoCaseDocRef)]);
+        if (worksheetSnap.exists() || aforoCaseSnap.exists()) {
+          toast({ title: "Registro Duplicado", description: `Ya existe un registro con el NE ${neTrimmed}.`, variant: "destructive" });
+          setIsSubmitting(false);
+          return;
+        }
+        
+        const creationTimestamp = Timestamp.now();
+        const createdByInfo = { by: user.displayName, at: creationTimestamp };
+        
+        const worksheetData = { ...data, id: neTrimmed, ne: neTrimmed, createdAt: creationTimestamp, createdBy: user.email!, lastUpdatedAt: creationTimestamp };
+        batch.set(worksheetDocRef, worksheetData);
+
+        const aforoCaseData: Partial<AforoCase> = {
+          ne: neTrimmed,
+          executive: data.executive,
+          consignee: data.consignee,
+          facturaNumber: data.facturaNumber,
+          declarationPattern: '',
+          merchandise: data.observations,
+          createdBy: user.uid,
+          createdAt: creationTimestamp,
+          aforador: data.aforador || '',
+          assignmentDate: data.aforador ? creationTimestamp : null,
+          aforadorStatus: 'Pendiente ',
+          aforadorStatusLastUpdate: createdByInfo,
+          revisorStatus: 'Pendiente',
+          revisorStatusLastUpdate: createdByInfo,
+          preliquidationStatus: 'Pendiente',
+          preliquidationStatusLastUpdate: createdByInfo,
+          digitacionStatus: 'Pendiente',
+          digitacionStatusLastUpdate: createdByInfo,
+          incidentStatus: 'Pendiente',
+          incidentStatusLastUpdate: createdByInfo,
+          revisorAsignado: '',
+          revisorAsignadoLastUpdate: createdByInfo,
+          digitadorAsignado: '',
+          digitadorAsignadoLastUpdate: createdByInfo,
+          worksheetId: neTrimmed,
+          entregadoAforoAt: creationTimestamp,
+        };
+        batch.set(aforoCaseDocRef, aforoCaseData);
+
+        const initialLogRef = doc(collection(aforoCaseDocRef, 'actualizaciones'));
+        const initialLog: AforoCaseUpdate = {
+          updatedAt: Timestamp.now(),
+          updatedBy: user.displayName,
+          field: 'creation',
+          oldValue: null,
+          newValue: `case_created_from_${worksheetType}`,
+          comment: `${worksheetType === 'anexo_5' ? 'Anexo 5' : 'Anexo 7'} ingresado por ${user.displayName}.`,
+        };
+        batch.set(initialLogRef, initialLog);
+
+        await batch.commit();
+        toast({ title: "Registro Creado", description: `El registro para el ${worksheetType.replace('_', ' ')} ${neTrimmed} ha sido guardado.` });
+        router.push('/executive');
+        form.reset();
+          
+      } catch (serverError: any) {
+        console.error("Error creating record:", serverError);
+        const permissionError = new FirestorePermissionError({
+          path: `batch write to worksheets/${neTrimmed} and AforoCases/${neTrimmed}`,
+          operation: 'create',
+          requestResourceData: { worksheetData: data, aforoCaseData: { ne: neTrimmed } },
+        }, serverError);
+        errorEmitter.emit('permission-error', permissionError);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -286,14 +343,14 @@ function AnexoForm() {
     <>
       <Card className="w-full max-w-screen-2xl mx-auto">
         <CardHeader>
-            <CardTitle className="text-2xl">{worksheetType === 'anexo_5' ? 'Anexo 5' : 'Anexo 7'}: Nota de Traslado</CardTitle>
-            <CardDescription>Complete la información para generar el nuevo anexo.</CardDescription>
+            <CardTitle className="text-2xl">{editingWorksheetId ? 'Editar' : 'Nuevo'} {worksheetType === 'anexo_5' ? 'Anexo 5' : 'Anexo 7'}: Nota de Traslado</CardTitle>
+            <CardDescription>{editingWorksheetId ? `Modificando el anexo ${editingWorksheetId}.` : 'Complete la información para generar el nuevo anexo.'}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <FormField control={form.control} name="ne" render={({ field }) => (<FormItem><FormLabel>NE</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name="ne" render={({ field }) => (<FormItem><FormLabel>NE</FormLabel><FormControl><Input {...field} disabled={!!editingWorksheetId} /></FormControl><FormMessage /></FormItem>)}/>
                 <FormField control={form.control} name="consignee" render={({ field }) => (<FormItem><FormLabel>Empresa que solicita (Consignatario)</FormLabel><FormControl><ConsigneeSelector value={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>)}/>
                 <FormField control={form.control} name="ruc" render={({ field }) => (<FormItem><FormLabel>RUC</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 <FormField control={form.control} name="resa" render={({ field }) => (<FormItem><FormLabel>RESA No</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
