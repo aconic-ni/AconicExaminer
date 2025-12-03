@@ -260,7 +260,7 @@ export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => v
 
           <div className="hidden print:block">
               <Image
-                  src="/imagenes/FOOTERSOLICITUDETAIL.svg"
+                  src="/AconicExaminer/imagenes/FOOTERSOLICITUDETAIL.svg"
                   alt="Footer"
                   width={800}
                   height={50}
