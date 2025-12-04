@@ -152,68 +152,54 @@ export function DigitizationCasesTable({ filters, setAllFetchedCases, displayCas
 
     fetchAssignableUsers();
     
-    // Query 1: Not completed cases
-    const statuses = ['Pendiente de Digitación', 'En Proceso', 'Almacenado'];
-    const qIncomplete = query(
-        collection(db, 'AforoCases'),
-        where('digitacionStatus', 'in', statuses)
-    );
+    let qCases;
 
-    // Query 2: Cases completed today
-    const todayStart = startOfDay(new Date());
-    const todayEnd = endOfDay(new Date());
-    const qCompletedToday = query(
-        collection(db, 'AforoCases'),
-        where('digitacionStatus', '==', 'Trámite Completo'),
-        where('digitacionStatusLastUpdate.at', '>=', todayStart),
-        where('digitacionStatusLastUpdate.at', '<=', todayEnd)
-    );
+    if (filters.ne?.trim()) {
+        qCases = query(collection(db, 'AforoCases'), where('ne', '==', filters.ne.trim().toUpperCase()));
+    } else {
+        const statuses = ['Pendiente de Digitación', 'En Proceso', 'Almacenado'];
+        qCases = query(
+            collection(db, 'AforoCases'),
+            where('digitacionStatus', 'in', statuses),
+            orderBy('revisorStatus', 'desc'), 
+            orderBy('createdAt', 'desc')
+        );
+    }
 
-    const unsubIncomplete = onSnapshot(qIncomplete, async (snap1) => {
-        const incompleteCases = snap1.docs.map(doc => ({ id: doc.id, ...doc.data() } as AforoCase));
+    const unsubscribe = onSnapshot(qCases, async (snapshot) => {
+        const aforoCasesData: AforoCase[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AforoCase));
         
-        const unsubCompleted = onSnapshot(qCompletedToday, async (snap2) => {
-            const completedTodayCases = snap2.docs.map(doc => ({ id: doc.id, ...doc.data() } as AforoCase));
-            
-            const allVisibleCases = [...incompleteCases, ...completedTodayCases];
-            
-            const worksheetsSnap = await getDocs(collection(db, 'worksheets'));
-            const worksheetsMap = new Map(worksheetsSnap.docs.map(doc => [doc.id, doc.data() as Worksheet]));
+        const worksheetsSnap = await getDocs(collection(db, 'worksheets'));
+        const worksheetsMap = new Map(worksheetsSnap.docs.map(doc => [doc.id, doc.data() as Worksheet]));
 
-            const uniqueCases = Array.from(new Map(allVisibleCases.map(c => [c.id, c])).values());
-            
-            const casesWithWorksheetInfo = uniqueCases.map(c => ({
-              ...c,
-              worksheet: worksheetsMap.get(c.worksheetId || '') || null,
-            }));
-            
-            let filtered = casesWithWorksheetInfo.filter(c => c.worksheet?.worksheetType !== 'anexo_5' && c.worksheet?.worksheetType !== 'anexo_7');
-            
-            if (filters.ne) {
-                filtered = filtered.filter(c => c.ne.toUpperCase().includes(filters.ne!.toUpperCase()));
-            }
+        const casesWithWorksheetInfo = aforoCasesData
+            .map(caseItem => ({
+                ...caseItem,
+                worksheet: worksheetsMap.get(caseItem.worksheetId || '') || null,
+            }))
+            .filter(c => 
+                c.worksheet?.worksheetType !== 'anexo_5' && 
+                c.worksheet?.worksheetType !== 'anexo_7' && 
+                c.worksheet?.worksheetType !== 'corporate_report'
+            );
 
-            filtered.sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0));
-            
-            setAllFetchedCases(filtered);
-            setIsLoading(false);
+        let filtered = casesWithWorksheetInfo;
+        
+        if (filters.ne) {
+            filtered = filtered.filter(c => c.ne.toUpperCase().includes(filters.ne!.toUpperCase()));
+        }
 
-        }, (error) => {
-             console.error("Error fetching completed digitization cases: ", error);
-             toast({ title: "Error", description: "No se pudieron cargar los casos completados hoy.", variant: "destructive" });
-             setIsLoading(false);
-        });
-
-        return () => unsubCompleted();
-
+        filtered.sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0));
+        
+        setAllFetchedCases(filtered);
+        setIsLoading(false);
     }, (error) => {
-        console.error("Error fetching incomplete digitization cases: ", error);
+        console.error("Error fetching digitization cases: ", error);
         toast({ title: "Error", description: "No se pudieron cargar los casos para digitación.", variant: "destructive" });
         setIsLoading(false);
     });
 
-    return () => unsubIncomplete();
-
+    return () => unsubscribe();
   }, [filters, toast, setAllFetchedCases]);
 
   const handleAssignDigitador = (caseId: string, digitadorName: string) => {
