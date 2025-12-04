@@ -1,6 +1,6 @@
 
 "use client";
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,9 +10,11 @@ import type { ExamDocument } from '@/types';
 import { getMonth, getYear, format, eachMonthOfInterval, startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { DatePicker } from '@/components/reports/DatePicker';
-import { FileText, Package, DivideCircle, Users } from 'lucide-react';
+import { FileText, Package, DivideCircle, Users, Download } from 'lucide-react';
 import { Timestamp } from 'firebase/firestore';
-
+import { Button } from '../ui/button';
+import html2canvas from 'html2canvas';
+import Image from 'next/image';
 
 interface PrevioDashboardProps {
     allExams: ExamDocument[];
@@ -34,6 +36,11 @@ export function PrevioDashboard({ allExams }: PrevioDashboardProps) {
   const [specificDate, setSpecificDate] = useState<Date | undefined>();
   const [selectedMonth, setSelectedMonth] = useState<number>(getMonth(new Date()));
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  
+  const lineChartRef = useRef<HTMLDivElement>(null);
+  const gestorExamsChartRef = useRef<HTMLDivElement>(null);
+  const gestorProductsChartRef = useRef<HTMLDivElement>(null);
+
 
  const filterExams = useCallback((start: Date, end: Date) => {
     return allExams.filter(exam => {
@@ -144,6 +151,26 @@ export function PrevioDashboard({ allExams }: PrevioDashboardProps) {
 
     return { totalExams, totalProducts, examsByManager, productsByManager, examsByMonth, avgProductsPerExam, avgExamsPerManager };
   }, [filteredExams, allExams, filterType, selectedYear]);
+  
+  const handleDownloadChart = (chartRef: React.RefObject<HTMLDivElement>, chartName: string) => {
+    if (chartRef.current) {
+        const captureDiv = chartRef.current;
+        const header = captureDiv.querySelector('.download-header') as HTMLElement;
+        
+        if(header) header.style.display = 'block';
+
+        html2canvas(captureDiv, { 
+          scale: 1.5,
+          backgroundColor: null 
+        }).then((canvas) => {
+            const link = document.createElement('a');
+            link.download = `grafico_${chartName}_${new Date().toISOString().split('T')[0]}.jpg`;
+            link.href = canvas.toDataURL('image/jpeg', 0.9);
+            link.click();
+            if(header) header.style.display = 'none';
+        });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -201,10 +228,16 @@ export function PrevioDashboard({ allExams }: PrevioDashboardProps) {
           ))}
       </div>
 
-      <Card>
+      <Card ref={lineChartRef}>
+          <div className="download-header" style={{ display: 'none', padding: '1rem', backgroundColor: 'white' }}><Image src="/AconicExaminer/imagenes/HEADERSEXA.svg" alt="Header" width={800} height={100} priority/></div>
           <CardHeader>
-              <CardTitle>Operaciones Anual</CardTitle>
-              <CardDescription>Volumen de exámenes previos completados a lo largo del tiempo.</CardDescription>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>Operaciones Anual</CardTitle>
+                  <CardDescription>Volumen de exámenes previos completados a lo largo del tiempo.</CardDescription>
+                </div>
+                <Button onClick={() => handleDownloadChart(lineChartRef, 'operaciones_anual')} variant="ghost" size="icon"><Download className="h-4 w-4" /></Button>
+              </div>
           </CardHeader>
           <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -221,10 +254,16 @@ export function PrevioDashboard({ allExams }: PrevioDashboardProps) {
       </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
-          <Card>
+          <Card ref={gestorExamsChartRef}>
+              <div className="download-header" style={{ display: 'none', padding: '1rem', backgroundColor: 'white' }}><Image src="/AconicExaminer/imagenes/HEADERSEXA.svg" alt="Header" width={800} height={100} priority/></div>
               <CardHeader>
-                  <CardTitle>Exámenes por Gestor</CardTitle>
-                  <CardDescription>Top 10 gestores por volumen de exámenes.</CardDescription>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>Exámenes por Gestor</CardTitle>
+                    <CardDescription>Top 10 gestores por volumen de exámenes.</CardDescription>
+                  </div>
+                  <Button onClick={() => handleDownloadChart(gestorExamsChartRef, 'examenes_por_gestor')} variant="ghost" size="icon"><Download className="h-4 w-4" /></Button>
+                </div>
               </CardHeader>
               <CardContent>
                   <ResponsiveContainer width="100%" height={350}>
@@ -240,10 +279,16 @@ export function PrevioDashboard({ allExams }: PrevioDashboardProps) {
               </CardContent>
           </Card>
           
-          <Card>
+          <Card ref={gestorProductsChartRef}>
+              <div className="download-header" style={{ display: 'none', padding: '1rem', backgroundColor: 'white' }}><Image src="/AconicExaminer/imagenes/HEADERSEXA.svg" alt="Header" width={800} height={100} priority/></div>
               <CardHeader>
-                  <CardTitle>Productos Inspeccionados por Gestor</CardTitle>
-                  <CardDescription>Top 10 gestores por volumen de productos.</CardDescription>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>Productos Inspeccionados por Gestor</CardTitle>
+                    <CardDescription>Top 10 gestores por volumen de productos.</CardDescription>
+                  </div>
+                  <Button onClick={() => handleDownloadChart(gestorProductsChartRef, 'productos_por_gestor')} variant="ghost" size="icon"><Download className="h-4 w-4" /></Button>
+                </div>
               </CardHeader>
               <CardContent>
                    <ResponsiveContainer width="100%" height={350}>
