@@ -3,7 +3,15 @@
 
 import React from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { GitBranch, Banknote, AlertTriangle, ShieldAlert, BookOpen } from 'lucide-react';
+import {
+  GitBranch,
+  Banknote,
+  AlertTriangle,
+  ShieldAlert,
+  BookOpen,
+  Briefcase,
+  FileText
+} from 'lucide-react';
 import type { WorksheetWithCase } from '@/types';
 import { cn } from '@/lib/utils';
 import { doc, getDoc } from 'firebase/firestore';
@@ -45,6 +53,61 @@ const BadgeIcon: React.FC<{
   );
 };
 
+const DocumentTypeBadge: React.FC<{ worksheetType: WorksheetWithCase['worksheet']['worksheetType'] }> = ({ worksheetType }) => {
+    let Icon, text, tooltipText, bgColor, textColor;
+
+    switch (worksheetType) {
+        case 'anexo_5':
+            Icon = null;
+            text = '5';
+            tooltipText = 'Anexo 5';
+            bgColor = 'bg-cyan-500';
+            textColor = 'text-white';
+            break;
+        case 'anexo_7':
+            Icon = null;
+            text = '7';
+            tooltipText = 'Anexo 7';
+            bgColor = 'bg-purple-500';
+            textColor = 'text-white';
+            break;
+        case 'corporate_report':
+            Icon = Briefcase;
+            text = null;
+            tooltipText = 'Reporte Corporativo';
+            bgColor = 'bg-gray-700';
+            textColor = 'text-white';
+            break;
+        case 'hoja_de_trabajo':
+        default:
+            Icon = BookOpen;
+            text = null;
+            tooltipText = 'Hoja de Trabajo';
+            bgColor = 'bg-gray-300';
+            textColor = 'text-gray-700';
+            break;
+    }
+
+    const badgeClass = cn(
+        "h-6 w-6 rounded-full flex items-center justify-center border",
+        bgColor,
+        textColor
+    );
+
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <div className={badgeClass}>
+                    {Icon ? <Icon className="h-4 w-4" /> : <span className="text-xs font-bold">{text}</span>}
+                </div>
+            </TooltipTrigger>
+            <TooltipContent>
+                <p>{tooltipText}</p>
+            </TooltipContent>
+        </Tooltip>
+    );
+};
+
 
 export function StatusBadges({ caseData }: StatusBadgesProps) {
   // Logic for each badge
@@ -66,11 +129,12 @@ export function StatusBadges({ caseData }: StatusBadgesProps) {
   return (
     <TooltipProvider>
         <div className="flex items-center gap-1.5">
+            <DocumentTypeBadge worksheetType={caseData.worksheet?.worksheetType} />
             <BadgeIcon Icon={GitBranch} tooltipText="Permisos" isComplete={hasPermits ? allPermitsDone : null} />
             <BadgeIcon Icon={Banknote} tooltipText="Pagos" isComplete={hasPayments ? allPaymentsDone : null} />
             <BadgeIcon Icon={AlertTriangle} tooltipText="Incidencia" isComplete={hasIncident ? incidentApproved : null} />
             <BadgeIcon Icon={ShieldAlert} tooltipText="Duda de Valor" isComplete={hasValueDoubt ? valueDoubtProcessed : null} />
-            <BadgeIcon Icon={BookOpen} tooltipText="Previo" isComplete={hasPrevio ? previoCompleted : null} />
+            <BadgeIcon Icon={FileText} tooltipText="Previo" isComplete={hasPrevio ? previoCompleted : null} />
         </div>
     </TooltipProvider>
   );
