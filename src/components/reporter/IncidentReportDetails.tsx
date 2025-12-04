@@ -164,7 +164,6 @@ export const IncidentReportDetails: React.FC<{ caseData: AforoCase; onClose: () 
           width={800}
           height={50}
           className="w-full h-auto mt-6 hidden print:block"
-          priority
       />
     </Card>
   );
