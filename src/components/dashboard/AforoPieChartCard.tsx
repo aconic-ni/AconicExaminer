@@ -1,10 +1,14 @@
 
 "use client"
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import Image from 'next/image';
 
 interface ChartData {
   name: string;
@@ -36,22 +40,62 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 
   return (
     <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-xs font-semibold">
-      {`${(percent * 100).toFixed(0)}%`}
+      {`'${(percent * 100).toFixed(0)}%`}
     </text>
   );
 };
 
 
 export const AforoPieChartCard: React.FC<AforoPieChartCardProps> = ({ title, description, data }) => {
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadImage = () => {
+    if (chartRef.current) {
+        const captureDiv = chartRef.current;
+        const header = captureDiv.querySelector('.download-header') as HTMLElement;
+        
+        if(header) header.style.display = 'block';
+
+        html2canvas(captureDiv, { 
+          scale: 1.5,
+          backgroundColor: null
+        }).then((canvas) => {
+            const link = document.createElement('a');
+            const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+            link.download = `grafico_${sanitizedTitle}.jpg`;
+            link.href = canvas.toDataURL('image/jpeg', 0.9);
+            link.click();
+            
+            if(header) header.style.display = 'none';
+        });
+    }
+  };
 
   const totalValue = useMemo(() => data.reduce((acc, entry) => acc + entry.value, 0), [data]);
   const filteredData = data.filter(entry => entry.value > 0).sort((a,b) => b.value - a.value);
 
   return (
-    <Card>
+    <Card ref={chartRef}>
+       <div className="download-header" style={{ display: 'none', padding: '1rem', backgroundColor: 'white' }}>
+          <Image
+              src="/AconicExaminer/imagenes/HEADERSEXA.svg"
+              alt="Examen Header"
+              width={800}
+              height={100}
+              className="w-full h-auto mb-4"
+              priority
+          />
+       </div>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <div className="flex justify-between items-start">
+            <div>
+                <CardTitle>{title}</CardTitle>
+                <CardDescription>{description}</CardDescription>
+            </div>
+            <Button onClick={handleDownloadImage} variant="ghost" size="icon">
+                <Download className="h-4 w-4" />
+            </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {totalValue === 0 ? (
@@ -89,22 +133,19 @@ export const AforoPieChartCard: React.FC<AforoPieChartCardProps> = ({ title, des
                 <h4 className="font-semibold text-center">Total: {totalValue}</h4>
                  <ScrollArea className="h-[200px]">
                     <div className="space-y-2 pr-4">
-                    {filteredData
-                        .map((entry, index) => {
-                            const percentage = totalValue > 0 ? (entry.value / totalValue) * 100 : 0;
-                            return (
-                                <div key={index} className="flex items-center justify-between text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                                        <span className="truncate">{entry.name}</span>
-                                    </div>
-                                    <div className="font-medium text-right">
-                                        <span>{entry.value}</span>
-                                        <Badge variant="secondary" className="ml-2 w-14 justify-center">{percentage.toFixed(1)}%</Badge>
-                                    </div>
+                      {filteredData.map((entry, index) => {
+                          const percentage = totalValue > 0 ? (entry.value / totalValue) * 100 : 0;
+                          return (
+                            <div key={index} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2 text-sm">
+                                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                <span className="truncate pr-2">{entry.name}</span>
+                                <div className="flex items-center gap-2 font-medium text-right shrink-0">
+                                    <span>{entry.value}</span>
+                                    <Badge variant="secondary" className="w-14 justify-center">{percentage.toFixed(1)}%</Badge>
                                 </div>
-                            )
-                    })}
+                            </div>
+                          )
+                      })}
                     </div>
                 </ScrollArea>
             </div>
