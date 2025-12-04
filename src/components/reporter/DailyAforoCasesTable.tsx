@@ -1,10 +1,9 @@
-
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, Timestamp, orderBy, doc, updateDoc, addDoc, getDocs, writeBatch, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
-import type { AforoCase, AforoCaseUpdate, AppUser, AforadorStatus, Worksheet, DigitacionStatus, IncidentStatus, PreliquidationStatus, LastUpdateInfo, WorksheetWithCase, SolicitudRecord } from '@/types';
+import type { AforoCase, AforoCaseUpdate, AppUser, AforadorStatus, Worksheet, DigitacionStatus, IncidentStatus, PreliquidationStatus, LastUpdateInfo, WorksheetWithCase, SolicitudRecord, ExamDocument } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Inbox, Eye, History, Repeat, PlusSquare, Edit, BookOpen, ChevronDown, ChevronRight, User, UserCheck, Send, AlertTriangle, CheckSquare, ChevronsUpDown, Check, Info, Users, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -74,7 +73,7 @@ const LastUpdateTooltip = ({ lastUpdate, caseCreation }: { lastUpdate?: LastUpda
 };
 
 
-export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases }: DigitizationCasesTableProps) {
+export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases }: DailyAforoCasesTableProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
@@ -255,13 +254,40 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
         const worksheetsSnap = await getDocs(collection(db, 'worksheets'));
         const worksheetsMap = new Map(worksheetsSnap.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() } as Worksheet]));
 
+        const examenesSnap = await getDocs(collection(db, 'examenesPrevios'));
+        const examenesMap = new Map(examenesSnap.docs.map(doc => [doc.id, doc.data() as any]));
+        
+        const allSolicitudes = new Map<string, SolicitudRecord[]>();
+
+        try {
+            const [solicitudesSnap, memorandumSnap] = await Promise.all([
+                getDocs(collectionGroup(db, "SolicitudCheques")),
+                getDocs(collectionGroup(db, "Memorandum")),
+            ]);
+            [...solicitudesSnap.docs, ...memorandumSnap.docs].forEach(doc => {
+                const data = doc.data() as SolicitudRecord;
+                if(data.examNe) {
+                    const ne = data.examNe;
+                    if (!allSolicitudes.has(ne)) {
+                        allSolicitudes.set(ne, []);
+                    }
+                    allSolicitudes.get(ne)!.push({ solicitudId: doc.id, ...data });
+                }
+            });
+        } catch (e) {
+            // This might fail on new projects without composite indexes, but it's not critical.
+            console.warn("Could not fetch SolicitudCheques/Memorandum across collections. Payments data may be incomplete. This usually requires a composite index to be created in Firestore.", e);
+        }
+
         const combinedData = aforoCasesData
             .map(caseItem => ({
                 ...caseItem,
-                worksheet: worksheetsMap.get(caseItem.worksheetId || '') || null
+                worksheet: worksheetsMap.get(caseItem.worksheetId || '') || null,
+                examenPrevio: examenesMap.get(caseItem.id) || null,
+                pagos: allSolicitudes.get(caseItem.ne) || []
             }))
             .filter(caseItem => 
-                caseItem.worksheet?.worksheetType !== 'anexo_5' && caseItem.worksheet?.worksheetType !== 'anexo_7'
+                caseItem.worksheet?.worksheetType === 'hoja_de_trabajo'
             );
 
         let filtered = combinedData;
@@ -416,25 +442,11 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
   };
   
   const getRevisorStatusBadgeVariant = (status?: AforoCaseStatus) => {
-    switch (status) {
-        case 'Aprobado': return 'default';
-        case 'Rechazado': return 'destructive';
-        case 'Revalidación Solicitada': return 'secondary';
-        case 'Pendiente':
-        default:
-            return 'outline';
-    }
-  }
-
+    switch (status) { case 'Aprobado': return 'default'; case 'Rechazado': return 'destructive'; case 'Revalidación Solicitada': return 'secondary'; default: return 'outline'; }
+  };
   const getAforadorStatusBadgeVariant = (status?: AforadorStatus) => {
-    switch(status) {
-        case 'En revisión': return 'default';
-        case 'Incompleto': return 'destructive';
-        case 'En proceso': return 'secondary';
-        case 'Pendiente ': return 'destructive';
-        default: return 'outline';
-    }
-  }
+    switch(status) { case 'En revisión': return 'default'; case 'Incompleto': return 'destructive'; case 'En proceso': return 'secondary'; case 'Pendiente ': return 'destructive'; default: return 'outline'; }
+  };
   
   const getIncidentStatusBadgeVariant = (status?: IncidentStatus) => {
     switch(status) {
