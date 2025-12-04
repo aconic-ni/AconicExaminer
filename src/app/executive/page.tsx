@@ -129,7 +129,7 @@ export default function ExecutivePage() {
   const [onlyCorporate, setOnlyCorporate] = useState(false);
 
 
-  // State for applied filters
+  // State for applied filters that trigger re-fetch
   const [appliedFilters, setAppliedFilters] = useState({
     searchTerm: '',
     facturado: false,
@@ -589,7 +589,7 @@ export default function ExecutivePage() {
                                 <DropdownMenuLabel>Tipo de Documento</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
-                                    <Link href="/executive/anexos?type=hoja_de_trabajo">
+                                    <Link href="/executive/worksheet">
                                         <FilePlus className="mr-2 h-4 w-4" /> Hoja de Trabajo
                                     </Link>
                                 </DropdownMenuItem>
@@ -714,7 +714,7 @@ export default function ExecutivePage() {
                                 const isResaCritical = daysUntilDue !== null && daysUntilDue < -15;
 
                                 return (
-                                <TableRow key={c.id} className={savingState[c.id] ? "bg-amber-100" : (isResaCritical ? "bg-red-200 hover:bg-red-200/80" : "")}>
+                                <TableRow key={c.id} className={savingState[c.id] ? "bg-amber-100" : (isResaCritical ? "bg-red-200 hover:bg-red-300" : "")}>
                                     <TableCell>
                                       <div className="flex items-center gap-0.5">
                                         <DropdownMenu>
@@ -819,7 +819,7 @@ export default function ExecutivePage() {
                                     <TableCell>
                                        <div className="flex items-center">
                                             <Badge variant={getRevisorStatusBadgeVariant(c.revisorStatus)}>{c.revisorStatus || 'Pendiente'}</Badge>
-                                            <LastUpdateTooltip lastUpdate={c.revisorStatusLastUpdate} caseCreation={c.createdAt} />
+                                            <LastUpdateTooltip lastUpdate={c.revisorStatusLastUpdate} caseCreation={c.createdAt}/>
                                        </div>
                                     </TableCell>
                                     <TableCell>
@@ -831,13 +831,13 @@ export default function ExecutivePage() {
                                             ) : (
                                                 getPreliquidationStatusBadge(c.preliquidationStatus)
                                             )}
-                                            <LastUpdateTooltip lastUpdate={c.preliquidationStatusLastUpdate} caseCreation={c.createdAt} />
+                                            <LastUpdateTooltip lastUpdate={c.preliquidationStatusLastUpdate} caseCreation={c.createdAt}/>
                                         </div>
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center">
                                             {getDigitacionBadge(c.digitacionStatus, c.declaracionAduanera)}
-                                            <LastUpdateTooltip lastUpdate={c.digitacionStatusLastUpdate} caseCreation={c.createdAt} />
+                                            <LastUpdateTooltip lastUpdate={c.digitacionStatusLastUpdate} caseCreation={c.createdAt}/>
                                         </div>
                                     </TableCell>
                                      <TableCell>
@@ -891,7 +891,7 @@ export default function ExecutivePage() {
                                     <TableCell>
                                       <div className="flex items-center">
                                         {getIncidentTypeDisplay(c)}
-                                        <LastUpdateTooltip lastUpdate={c.incidentStatusLastUpdate} caseCreation={c.createdAt} />
+                                        <LastUpdateTooltip lastUpdate={c.incidentStatusLastUpdate} caseCreation={c.createdAt}/>
                                       </div>
                                     </TableCell>
                                     <TableCell>
