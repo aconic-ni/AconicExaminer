@@ -458,7 +458,6 @@ export default function ExecutivePage() {
     setFacturadoFilter({ facturado: false, noFacturado: true });
     setOnlyCorporate(false);
     setDateRangeInput(undefined);
-    setAppliedFilters({ searchTerm: '', facturado: false, noFacturado: true, onlyCorporate: false, dateFilterType: 'range', dateRange: undefined });
     setNeFilter('');
     setEjecutivoFilter('');
     setConsignatarioFilter('');
@@ -469,6 +468,7 @@ export default function ExecutivePage() {
     setDigitacionStatusFilter('');
     setSelectividadFilter('');
     setIncidentTypeFilter('');
+    setAppliedFilters({ searchTerm: '', facturado: false, noFacturado: true, onlyCorporate: false, dateFilterType: 'range', dateRange: undefined });
   };
   
   const handleSendToFacturacion = async (caseId: string) => {
@@ -501,7 +501,7 @@ export default function ExecutivePage() {
 
 
   const filteredCases = useMemo(() => {
-    let filtered = allCases.filter(c => c.isArchived !== true);
+    let filtered = allCases;
     
     if (appliedFilters.onlyCorporate) {
         filtered = filtered.filter(c => c.worksheet?.worksheetType === 'corporate_report');
@@ -678,7 +678,7 @@ export default function ExecutivePage() {
                                 <DropdownMenuLabel>Tipo de Documento</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
-                                    <Link href="/executive/anexos?type=hoja_de_trabajo">
+                                    <Link href="/executive/worksheet">
                                         <FilePlus className="mr-2 h-4 w-4" /> Hoja de Trabajo
                                     </Link>
                                 </DropdownMenuItem>
@@ -850,21 +850,29 @@ export default function ExecutivePage() {
                                             </TooltipTrigger>
                                             <TooltipContent><p>Añadir/Ver Comentarios</p></TooltipContent>
                                         </Tooltip>
-                                         {user?.role === 'admin' && (
+                                        {user?.role === 'admin' && (
                                             <AlertDialog>
-                                                <Tooltip>
+                                                <AlertDialogTrigger asChild>
+                                                  <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                                                                <Trash2 className="h-4 w-4"/>
-                                                            </Button>
-                                                        </AlertDialogTrigger>
+                                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                                                        <Archive className="h-4 w-4" />
+                                                      </Button>
                                                     </TooltipTrigger>
                                                     <TooltipContent><p>Archivar Caso</p></TooltipContent>
-                                                </Tooltip>
+                                                  </Tooltip>
+                                                </AlertDialogTrigger>
                                                 <AlertDialogContent>
-                                                    <AlertDialogHeader><AlertDialogTitle>¿Está seguro?</AlertDialogTitle><AlertDialogDescription>Archivar este caso lo ocultará de las listas principales. Podrá encontrarlo en la sección de "Archivados" en el panel de Control de Registros.</AlertDialogDescription></AlertDialogHeader>
-                                                    <AlertDialogFooter><AlertDialogCancel onClick={() => setCaseToArchive(null)}>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => setCaseToArchive(c)}>Sí, archivar</AlertDialogAction></AlertDialogFooter>
+                                                  <AlertDialogHeader>
+                                                    <AlertDialogTitle>¿Está seguro de archivar este caso?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                      Esta acción ocultará el caso de la lista principal. Podrá encontrarlo en la sección de "Archivados" en el panel de Control de Registros.
+                                                    </AlertDialogDescription>
+                                                  </AlertDialogHeader>
+                                                  <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => setCaseToArchive(c)}>Sí, Archivar</AlertDialogAction>
+                                                  </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>
                                         )}
@@ -877,7 +885,7 @@ export default function ExecutivePage() {
                                     <TableCell>
                                         <div className="flex items-center gap-1">
                                             <span>{c.executive}</span>
-                                            <LastUpdateTooltip lastUpdate={{ by: c.executive, at: c.createdAt }} caseCreation={c.createdAt} />
+                                            <LastUpdateTooltip lastUpdate={{by: c.executive, at: c.createdAt}} caseCreation={c.createdAt} />
                                         </div>
                                     </TableCell>
                                     <TableCell>
@@ -915,7 +923,7 @@ export default function ExecutivePage() {
                                     <TableCell>
                                        <div className="flex items-center">
                                             <Badge variant={getAforadorStatusBadgeVariant(c.aforadorStatus)}>{c.aforadorStatus || 'Pendiente'}</Badge>
-                                            <LastUpdateTooltip lastUpdate={c.aforadorStatusLastUpdate} caseCreation={c.createdAt} assignedUser={c.aforador} />
+                                            <LastUpdateTooltip lastUpdate={c.aforadorStatusLastUpdate} caseCreation={c.createdAt} assignedUser={c.aforador}/>
                                        </div>
                                     </TableCell>
                                     <TableCell>
@@ -1036,6 +1044,23 @@ export default function ExecutivePage() {
         </Card>
       </div>
     </AppShell>
+     <AlertDialog open={!!caseToArchive} onOpenChange={(open) => !open && setCaseToArchive(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Está seguro de archivar este caso?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta acción ocultará el caso <span className="font-bold">{caseToArchive?.ne}</span> de las listas principales. Podrá encontrarlo en la sección de "Archivados" en el panel de Control de Registros.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setCaseToArchive(null)}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleArchiveCase} disabled={savingState[caseToArchive?.id || '']}>
+                    {savingState[caseToArchive?.id || ''] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                    Sí, Archivar
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     {selectedCaseForDocs && (<ManageDocumentsModal isOpen={!!selectedCaseForDocs} onClose={() => setSelectedCaseForDocs(null)} caseData={selectedCaseForDocs} />)}
     {selectedCaseForHistory && (<AforoCaseHistoryModal isOpen={!!selectedCaseForHistory} onClose={() => setSelectedCaseForHistory(null)} caseData={selectedCaseForHistory} />)}
     {selectedCaseForIncident && (<IncidentReportModal isOpen={!!selectedCaseForIncident} onClose={() => setSelectedCaseForIncident(null)} caseData={selectedCaseForIncident} />)}
@@ -1074,3 +1099,5 @@ export default function ExecutivePage() {
     </>
   );
 }
+
+    
