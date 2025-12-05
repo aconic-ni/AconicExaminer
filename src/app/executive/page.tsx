@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -141,6 +140,17 @@ export default function ExecutivePage() {
     dateRange: undefined as DateRange | undefined,
   });
   
+  const [neFilter, setNeFilter] = useState('');
+  const [ejecutivoFilter, setEjecutivoFilter] = useState('');
+  const [consignatarioFilter, setConsignatarioFilter] = useState('');
+  const [facturaFilter, setFacturaFilter] = useState('');
+  const [aforadorStatusFilter, setAforadorStatusFilter] = useState('');
+  const [revisorStatusFilter, setRevisorStatusFilter] = useState('');
+  const [preliquidationStatusFilter, setPreliquidationStatusFilter] = useState('');
+  const [digitacionStatusFilter, setDigitacionStatusFilter] = useState('');
+  const [selectividadFilter, setSelectividadFilter] = useState('');
+  const [incidentTypeFilter, setIncidentTypeFilter] = useState('');
+
 
   useEffect(() => {
     if (!authLoading && (!user || !['ejecutivo', 'coordinadora', 'admin', 'supervisor'].includes(user.role || ''))) {
@@ -449,6 +459,16 @@ export default function ExecutivePage() {
     setOnlyCorporate(false);
     setDateRangeInput(undefined);
     setAppliedFilters({ searchTerm: '', facturado: false, noFacturado: true, onlyCorporate: false, dateFilterType: 'range', dateRange: undefined });
+    setNeFilter('');
+    setEjecutivoFilter('');
+    setConsignatarioFilter('');
+    setFacturaFilter('');
+    setAforadorStatusFilter('');
+    setRevisorStatusFilter('');
+    setPreliquidationStatusFilter('');
+    setDigitacionStatusFilter('');
+    setSelectividadFilter('');
+    setIncidentTypeFilter('');
   };
   
   const handleSendToFacturacion = async (caseId: string) => {
@@ -528,8 +548,21 @@ export default function ExecutivePage() {
         });
     }
 
+    // Apply column filters
+    if (neFilter) filtered = filtered.filter(c => c.ne.toLowerCase().includes(neFilter.toLowerCase()));
+    if (ejecutivoFilter) filtered = filtered.filter(c => c.executive.toLowerCase().includes(ejecutivoFilter.toLowerCase()));
+    if (consignatarioFilter) filtered = filtered.filter(c => c.consignee.toLowerCase().includes(consignatarioFilter.toLowerCase()));
+    if (facturaFilter) filtered = filtered.filter(c => c.facturaNumber?.toLowerCase().includes(facturaFilter.toLowerCase()));
+    if (aforadorStatusFilter) filtered = filtered.filter(c => (c.aforadorStatus || 'Pendiente').toLowerCase().includes(aforadorStatusFilter.toLowerCase()));
+    if (revisorStatusFilter) filtered = filtered.filter(c => (c.revisorStatus || 'Pendiente').toLowerCase().includes(revisorStatusFilter.toLowerCase()));
+    if (preliquidationStatusFilter) filtered = filtered.filter(c => (c.preliquidationStatus || 'Pendiente').toLowerCase().includes(preliquidationStatusFilter.toLowerCase()));
+    if (digitacionStatusFilter) filtered = filtered.filter(c => (c.digitacionStatus || 'Pendiente').toLowerCase().includes(digitacionStatusFilter.toLowerCase()));
+    if (selectividadFilter) filtered = filtered.filter(c => (c.selectividad || 'N/A').toLowerCase().includes(selectividadFilter.toLowerCase()));
+    if (incidentTypeFilter) filtered = filtered.filter(c => getIncidentTypeDisplay(c).toLowerCase().includes(incidentTypeFilter.toLowerCase()));
+
+
     return filtered.sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0));
-  }, [allCases, appliedFilters]);
+  }, [allCases, appliedFilters, neFilter, ejecutivoFilter, consignatarioFilter, facturaFilter, aforadorStatusFilter, revisorStatusFilter, preliquidationStatusFilter, digitacionStatusFilter, selectividadFilter, incidentTypeFilter]);
   
   const getRevisorStatusBadgeVariant = (status?: AforoCaseStatus) => {
     switch (status) { case 'Aprobado': return 'default'; case 'Rechazado': return 'destructive'; case 'Revalidación Solicitada': return 'secondary'; default: return 'outline'; }
@@ -645,7 +678,7 @@ export default function ExecutivePage() {
                                 <DropdownMenuLabel>Tipo de Documento</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
-                                    <Link href="/executive/worksheet">
+                                    <Link href="/executive/anexos?type=hoja_de_trabajo">
                                         <FilePlus className="mr-2 h-4 w-4" /> Hoja de Trabajo
                                     </Link>
                                 </DropdownMenuItem>
@@ -699,7 +732,7 @@ export default function ExecutivePage() {
                              <Button variant="outline" onClick={fetchCases}>
                                 <RefreshCw className="mr-2 h-4 w-4" /> Actualizar
                             </Button>
-                            <Button onClick={handleExport} disabled={filteredCases.length === 0 || isExporting}>
+                            <Button onClick={handleExport} disabled={allCases.length === 0 || isExporting}>
                                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
                                {isExporting ? 'Exportando...' : 'Exportar'}
                             </Button>
@@ -743,18 +776,18 @@ export default function ExecutivePage() {
                         <TooltipProvider>
                         <Table><TableHeader><TableRow>
                             <TableHead>Acciones</TableHead>
-                            <TableHead>NE</TableHead>
+                            <TableHead>NE<Input placeholder="Filtrar..." value={neFilter} onChange={e => setNeFilter(e.target.value)} className="h-8 mt-1"/></TableHead>
                             <TableHead>Insignias</TableHead>
-                            <TableHead>Ejecutivo</TableHead>
-                            <TableHead>Consignatario</TableHead>
-                            <TableHead>Factura</TableHead>
-                            <TableHead>Estado Aforador</TableHead>
-                            <TableHead>Estado Revisor</TableHead>
-                            <TableHead>Preliquidación</TableHead>
-                            <TableHead>Estado Digitación</TableHead>
-                            <TableHead>Selectividad</TableHead>
+                            <TableHead>Ejecutivo<Input placeholder="Filtrar..." value={ejecutivoFilter} onChange={e => setEjecutivoFilter(e.target.value)} className="h-8 mt-1"/></TableHead>
+                            <TableHead>Consignatario<Input placeholder="Filtrar..." value={consignatarioFilter} onChange={e => setConsignatarioFilter(e.target.value)} className="h-8 mt-1"/></TableHead>
+                            <TableHead>Factura<Input placeholder="Filtrar..." value={facturaFilter} onChange={e => setFacturaFilter(e.target.value)} className="h-8 mt-1"/></TableHead>
+                            <TableHead>Estado Aforador<Input placeholder="Filtrar..." value={aforadorStatusFilter} onChange={e => setAforadorStatusFilter(e.target.value)} className="h-8 mt-1"/></TableHead>
+                            <TableHead>Estado Revisor<Input placeholder="Filtrar..." value={revisorStatusFilter} onChange={e => setRevisorStatusFilter(e.target.value)} className="h-8 mt-1"/></TableHead>
+                            <TableHead>Preliquidación<Input placeholder="Filtrar..." value={preliquidationStatusFilter} onChange={e => setPreliquidationStatusFilter(e.target.value)} className="h-8 mt-1"/></TableHead>
+                            <TableHead>Estado Digitación<Input placeholder="Filtrar..." value={digitacionStatusFilter} onChange={e => setDigitacionStatusFilter(e.target.value)} className="h-8 mt-1"/></TableHead>
+                            <TableHead>Selectividad<Input placeholder="Filtrar..." value={selectividadFilter} onChange={e => setSelectividadFilter(e.target.value)} className="h-8 mt-1"/></TableHead>
                             <TableHead>Fecha Despacho</TableHead>
-                            <TableHead>Tipo Incidencia</TableHead>
+                            <TableHead>Tipo Incidencia<Input placeholder="Filtrar..." value={incidentTypeFilter} onChange={e => setIncidentTypeFilter(e.target.value)} className="h-8 mt-1"/></TableHead>
                             <TableHead>Facturado</TableHead>
                         </TableRow></TableHeader>
                         <TableBody>
@@ -770,7 +803,7 @@ export default function ExecutivePage() {
                                 const isResaCritical = daysUntilDue !== null && daysUntilDue < -15;
 
                                 return (
-                                <TableRow key={c.id} className={savingState[c.id] ? "bg-amber-100" : (isResaCritical ? "bg-red-200 hover:bg-red-300" : "")}>
+                                <TableRow key={c.id} className={savingState[c.id] ? "bg-amber-100" : (isResaCritical ? "bg-red-200 hover:bg-red-200/80" : "")}>
                                     <TableCell>
                                       <div className="flex items-center gap-0.5">
                                         <DropdownMenu>
@@ -881,17 +914,13 @@ export default function ExecutivePage() {
                                     </TableCell>
                                     <TableCell>
                                        <div className="flex items-center">
-                                            <Badge variant={getAforadorStatusBadgeVariant(c.aforadorStatus)}>
-                                                {c.aforadorStatus || 'Pendiente'}
-                                            </Badge>
+                                            <Badge variant={getAforadorStatusBadgeVariant(c.aforadorStatus)}>{c.aforadorStatus || 'Pendiente'}</Badge>
                                             <LastUpdateTooltip lastUpdate={c.aforadorStatusLastUpdate} caseCreation={c.createdAt} assignedUser={c.aforador} />
                                        </div>
                                     </TableCell>
                                     <TableCell>
                                        <div className="flex items-center">
-                                            <Badge variant={getRevisorStatusBadgeVariant(c.revisorStatus)}>
-                                               {c.revisorStatus || 'Pendiente'}
-                                            </Badge>
+                                            <Badge variant={getRevisorStatusBadgeVariant(c.revisorStatus)}>{c.revisorStatus || 'Pendiente'}</Badge>
                                             <LastUpdateTooltip lastUpdate={c.revisorStatusLastUpdate} caseCreation={c.createdAt} assignedUser={c.revisorAsignado}/>
                                        </div>
                                     </TableCell>
@@ -904,7 +933,7 @@ export default function ExecutivePage() {
                                             ) : (
                                                 getPreliquidationStatusBadge(c.preliquidationStatus)
                                             )}
-                                            <LastUpdateTooltip lastUpdate={c.preliquidationStatusLastUpdate} caseCreation={c.createdAt} />
+                                            <LastUpdateTooltip lastUpdate={c.preliquidationStatusLastUpdate} caseCreation={c.createdAt}/>
                                         </div>
                                     </TableCell>
                                     <TableCell>
@@ -964,7 +993,7 @@ export default function ExecutivePage() {
                                     <TableCell>
                                       <div className="flex items-center">
                                         {getIncidentTypeDisplay(c)}
-                                        <LastUpdateTooltip lastUpdate={c.incidentStatusLastUpdate} caseCreation={c.createdAt} />
+                                        <LastUpdateTooltip lastUpdate={c.incidentStatusLastUpdate} caseCreation={c.createdAt}/>
                                       </div>
                                     </TableCell>
                                     <TableCell>
