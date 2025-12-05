@@ -137,7 +137,7 @@ export const AforoPieChartCard: React.FC<AforoPieChartCardProps> = ({ title, des
             </div>
             <div className="w-full flex-1">
                 <h4 className="font-semibold text-center mb-2">Total: {totalValue}</h4>
-                 <ScrollArea className="h-[150px]">
+                 <ScrollArea>
                     <Table>
                       <TableHeader className="sr-only">
                         <TableRow>
