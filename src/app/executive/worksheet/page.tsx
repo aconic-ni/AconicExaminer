@@ -69,7 +69,7 @@ const requiredPermitSchema = z.object({
 const worksheetSchema = z.object({
   worksheetType: z.enum(['hoja_de_trabajo', 'anexo_5', 'anexo_7', 'corporate_report']).default('hoja_de_trabajo'),
   ne: z.string().min(1, "El campo NE es requerido."),
-  reference: z.string().max(12, "La referencia no puede exceder los 12 caracteres.").optional(),
+  reference: z.string().min(1, "La referencia es obligatoria.").max(12, "La referencia no puede exceder los 12 caracteres."),
   executive: z.string().min(1, "Ejecutivo es requerido."),
   consignee: z.string().min(1, "Consignatario es requerido."),
   aforador: z.string().optional(),
@@ -211,6 +211,8 @@ function WorksheetForm() {
   const watchTransportMode = form.watch('transportMode');
   const watchOperationType = form.watch('operationType');
   const watchIsJoint = form.watch('isJointOperation');
+  const watchAppliesTLC = form.watch('appliesTLC');
+  const watchAppliesModexo = form.watch('appliesModexo');
   const watchEntryCustoms = aduanaToShortCode[form.watch('entryCustoms')];
   const watchDispatchCustoms = aduanaToShortCode[form.watch('dispatchCustoms')];
   
@@ -243,7 +245,7 @@ function WorksheetForm() {
         const execRoles = ['admin', 'supervisor', 'coordinadora', 'ejecutivo'];
         const isManagement = execRoles.includes(user.role || '');
         if (isManagement) {
-            const execQuery = query(collection(db, 'users'), where('role', '==', 'ejecutivo'));
+            const execQuery = query(collection(db, 'users'), where('role', 'in', ['ejecutivo', 'coordinadora']));
             const querySnapshot = await getDocs(execQuery);
             setGroupMembers(querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser)));
         }
@@ -509,10 +511,7 @@ function WorksheetForm() {
   return (
     <>
     <Card className="w-full max-w-6xl mx-auto">
-      <CardHeader>
-        <CardTitle className="text-2xl">{editingWorksheetId ? 'Editar Hoja de Trabajo' : 'Nueva Hoja de Trabajo'}</CardTitle>
-        <CardDescription>{editingWorksheetId ? `Modificando la hoja de trabajo para el NE: ${editingWorksheetId}` : 'Complete la información para generar el registro.'}</CardDescription>
-      </CardHeader>
+      <CardHeader><CardTitle className="text-2xl">{editingWorksheetId ? 'Editar' : 'Nueva'} Hoja de Trabajo</CardTitle><CardDescription>{editingWorksheetId ? `Modificando la hoja de trabajo para el NE: ${editingWorksheetId}` : 'Complete la información para generar el registro.'}</CardDescription></CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
@@ -528,7 +527,7 @@ function WorksheetForm() {
                         </FormItem>
                     )}
                 />
-                <FormField control={form.control} name="reference" render={({ field }) => (<FormItem><FormLabel>Referencia</FormLabel><FormControl><Input {...field} maxLength={12} /></FormControl><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name="reference" render={({ field }) => (<FormItem><FormLabel>Referencia</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 <FormField
                   control={form.control}
                   name="executive"
@@ -626,6 +625,16 @@ function WorksheetForm() {
                             <FormLabel>Factura</FormLabel>
                             <FormControl><Input {...field} readOnly placeholder="Añada facturas con el botón dedicado. Separe con ; si son varias." className="bg-muted/50 cursor-not-allowed"/></FormControl>
                             <FormMessage />
+                        </FormItem>
+                    )}/>
+                </div>
+                
+                <div className="lg:col-span-3">
+                    <FormField control={form.control} name="description" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Descripción de la Mercancía</FormLabel>
+                        <FormControl><Textarea rows={3} placeholder="Breve descripción de la mercancía" {...field} /></FormControl>
+                        <FormMessage />
                         </FormItem>
                     )}/>
                 </div>
@@ -802,6 +811,19 @@ function WorksheetForm() {
                     )}
                 />
              )}
+             
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
+                <FormField control={form.control} name="appliesTLC" render={({ field }) => (<FormItem className="flex flex-row items-center justify-start space-x-3 space-y-0 rounded-md border p-4 col-span-1"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl><div className="space-y-0.5"><FormLabel>Aplica TLC</FormLabel></div></FormItem>)}/>
+                {form.watch('appliesTLC') && (
+                    <FormField control={form.control} name="tlcName" render={({ field }) => (<FormItem className="col-span-2"><FormLabel>Nombre del TLC</FormLabel><FormControl><Input placeholder="Especifique el TLC" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <FormField control={form.control} name="appliesModexo" render={({ field }) => (<FormItem className="flex flex-row items-center justify-start space-x-3 space-y-0 rounded-md border p-4 col-span-1"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl><div className="space-y-0.5"><FormLabel>Aplica Modexo</FormLabel></div></FormItem>)}/>
+                {form.watch('appliesModexo') && (
+                    <FormField control={form.control} name="modexoCode" render={({ field }) => (<FormItem className="col-span-2"><FormLabel>Código Modexo</FormLabel><FormControl><Input placeholder="Especifique el código" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                )}
+            </div>
 
             <div className="pt-4 border-t">
                 <div className="flex items-center gap-4 mb-2">
