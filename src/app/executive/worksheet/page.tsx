@@ -17,7 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import { X, Loader2, PlusCircle, Trash2, CheckSquare, Square, Receipt, Check, ChevronsUpDown, RotateCcw, ArrowLeft, Settings } from 'lucide-react';
+import { X, Loader2, PlusCircle, Trash2, CheckSquare, Square, Receipt, Check, ChevronsUpDown, RotateCcw, ArrowLeft, Settings, Edit } from 'lucide-react';
 import type { AforoCase, AforoCaseUpdate, RequiredPermit, DocumentStatus, Worksheet, AppUser, WorksheetDocument } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -366,7 +366,7 @@ function WorksheetForm() {
 
 
   const onSubmit = async (data: WorksheetFormData) => {
-    if (!user || !user.displayName || !user.email) {
+    if (!user || !user.displayName) {
         toast({ title: 'Error', description: 'Debe estar autenticado.', variant: 'destructive' });
         return;
     }
@@ -376,151 +376,143 @@ function WorksheetForm() {
     }
   
     setIsSubmitting(true);
+    const neTrimmed = data.ne.trim().toUpperCase();
     
     if (editingWorksheetId) {
-      // Logic to update existing document
-      const worksheetDocRef = doc(db, 'worksheets', editingWorksheetId);
-      const aforoCaseDocRef = doc(db, 'AforoCases', editingWorksheetId);
-      const batch = writeBatch(db);
+        // UPDATE LOGIC
+        const worksheetDocRef = doc(db, 'worksheets', editingWorksheetId);
+        try {
+            const dataToUpdate = { 
+                ...data, 
+                lastUpdatedAt: Timestamp.now(),
+                eta: data.eta ? Timestamp.fromDate(data.eta) : null,
+                requiredPermits: (data.requiredPermits || []).map(p => ({
+                    ...p,
+                    tramiteDate: p.tramiteDate ? Timestamp.fromDate(p.tramiteDate as unknown as Date) : null,
+                    estimatedDeliveryDate: p.estimatedDeliveryDate ? Timestamp.fromDate(p.estimatedDeliveryDate as unknown as Date) : null,
+                })),
+            };
+            await updateDoc(worksheetDocRef, dataToUpdate);
+            
+            // Also update the associated aforo case
+            const aforoCaseRef = doc(db, 'AforoCases', editingWorksheetId);
+            await updateDoc(aforoCaseRef, {
+                executive: data.executive,
+                consignee: data.consignee,
+                aforador: data.aforador || '',
+                facturaNumber: data.facturaNumber,
+            });
 
-      try {
-        const updatedWorksheetData = { 
-          ...data,
-          lastUpdatedAt: Timestamp.now(),
-          eta: data.eta ? Timestamp.fromDate(data.eta) : null,
-          requiredPermits: data.requiredPermits.map(p => ({
-            ...p,
-            tramiteDate: p.tramiteDate ? Timestamp.fromDate(p.tramiteDate as unknown as Date) : null,
-            estimatedDeliveryDate: p.estimatedDeliveryDate ? Timestamp.fromDate(p.estimatedDeliveryDate as unknown as Date) : null,
-          })),
-        };
-        batch.update(worksheetDocRef, updatedWorksheetData);
-        batch.update(aforoCaseDocRef, {
-            executive: data.executive,
-            consignee: data.consignee,
-            facturaNumber: data.facturaNumber,
-            merchandise: data.description,
-            aforador: data.aforador || '',
-        });
+            toast({ title: 'Hoja de Trabajo Actualizada', description: `El registro para el NE ${editingWorksheetId} ha sido actualizado.`});
+            router.push('/executive');
+        } catch (error) {
+            console.error("Error updating record:", error);
+            toast({ title: 'Error', description: 'No se pudo actualizar el registro.', variant: 'destructive' });
+        } finally {
+            setIsSubmitting(false);
+        }
 
-        const logRef = doc(collection(aforoCaseDocRef, 'actualizaciones'));
-        const updateLog: AforoCaseUpdate = {
-          updatedAt: Timestamp.now(),
-          updatedBy: user.displayName,
-          field: 'document_update',
-          oldValue: 'worksheet_version_previous',
-          newValue: 'worksheet_version_new',
-          comment: `Hoja de trabajo modificada por ${user.displayName}.`,
-        };
-        batch.set(logRef, updateLog);
-        
-        await batch.commit();
-        toast({ title: "Hoja de Trabajo Actualizada", description: `El registro para el NE ${editingWorksheetId} ha sido actualizado.` });
-        router.push('/executive');
-      } catch (err) {
-         toast({ title: "Error", description: "No se pudo actualizar la hoja de trabajo.", variant: "destructive" });
-      } finally {
-        setIsSubmitting(false);
-      }
     } else {
-      // Logic to create new document
-      const neTrimmed = data.ne.trim().toUpperCase();
-      const worksheetDocRef = doc(db, 'worksheets', neTrimmed);
-      const aforoCaseDocRef = doc(db, 'AforoCases', neTrimmed);
-  
-      try {
-          const [worksheetSnap, aforoCaseSnap] = await Promise.all([getDoc(worksheetDocRef), getDoc(aforoCaseDocRef)]);
+        // CREATE LOGIC
+        const worksheetDocRef = doc(db, 'worksheets', neTrimmed);
+        const aforoCaseDocRef = doc(db, 'AforoCases', neTrimmed);
+    
+        try {
+            const [worksheetSnap, aforoCaseSnap] = await Promise.all([getDoc(worksheetDocRef), getDoc(aforoCaseDocRef)]);
 
-          if (worksheetSnap.exists() || aforoCaseSnap.exists()) {
-              toast({ title: "Registro Duplicado", description: `Ya existe un registro con el NE ${neTrimmed}.`, variant: "destructive" });
-              setIsSubmitting(false);
-              return;
-          }
+            if (worksheetSnap.exists() || aforoCaseSnap.exists()) {
+                toast({ title: "Registro Duplicado", description: `Ya existe un registro con el NE ${neTrimmed}.`, variant: "destructive" });
+                setIsSubmitting(false);
+                return;
+            }
 
-          const batch = writeBatch(db);
-          const creationTimestamp = Timestamp.now();
-          const createdByInfo = { by: user.displayName, at: creationTimestamp };
+            const batch = writeBatch(db);
+            const creationTimestamp = Timestamp.now();
+            const createdByInfo = { by: user.displayName, at: creationTimestamp };
     
-          const worksheetData: Worksheet = { 
-              ...data, 
-              id: neTrimmed, 
-              ne: neTrimmed, 
-              eta: data.eta ? Timestamp.fromDate(data.eta) : null, 
-              createdAt: creationTimestamp, 
-              createdBy: user.email!, 
-              requiredPermits: data.requiredPermits || [], 
-              lastUpdatedAt: creationTimestamp 
-          };
-          batch.set(worksheetDocRef, worksheetData);
+            const worksheetData: Worksheet = { 
+                ...data, 
+                id: neTrimmed, 
+                ne: neTrimmed, 
+                eta: data.eta ? Timestamp.fromDate(data.eta) : null, 
+                createdAt: creationTimestamp, 
+                createdBy: user.email!, 
+                requiredPermits: data.requiredPermits || [], 
+                lastUpdatedAt: creationTimestamp 
+            };
+            batch.set(worksheetDocRef, worksheetData);
     
-          const aforoCaseData: Partial<AforoCase> = {
-              ne: neTrimmed,
-              executive: data.executive,
-              consignee: data.consignee,
-              facturaNumber: data.facturaNumber,
-              declarationPattern: data.patternRegime,
-              merchandise: data.description,
-              createdBy: user.uid,
-              createdAt: creationTimestamp,
-              aforador: data.aforador || '',
-              assignmentDate: (data.aforador && data.aforador !== '-') ? creationTimestamp : null,
-              aforadorStatus: 'Pendiente ',
-              aforadorStatusLastUpdate: createdByInfo,
-              revisorStatus: 'Pendiente',
-              revisorStatusLastUpdate: createdByInfo,
-              preliquidationStatus: 'Pendiente',
-              preliquidationStatusLastUpdate: createdByInfo,
-              digitacionStatus: 'Pendiente',
-              digitacionStatusLastUpdate: createdByInfo,
-              incidentStatus: 'Pendiente',
-              incidentStatusLastUpdate: createdByInfo,
-              revisorAsignado: '',
-              revisorAsignadoLastUpdate: createdByInfo,
-              digitadorAsignado: '',
-              digitadorAsignadoLastUpdate: createdByInfo,
-              worksheetId: neTrimmed,
-              entregadoAforoAt: creationTimestamp,
-          };
-          batch.set(aforoCaseDocRef, aforoCaseData);
+            const aforoCaseData: Partial<AforoCase> = {
+                ne: neTrimmed,
+                executive: data.executive,
+                consignee: data.consignee,
+                facturaNumber: data.facturaNumber,
+                declarationPattern: data.patternRegime,
+                merchandise: data.description,
+                createdBy: user.uid,
+                createdAt: creationTimestamp,
+                aforador: data.aforador || '',
+                assignmentDate: (data.aforador && data.aforador !== '-') ? creationTimestamp : null,
+                aforadorStatus: 'Pendiente ',
+                aforadorStatusLastUpdate: createdByInfo,
+                revisorStatus: 'Pendiente',
+                revisorStatusLastUpdate: createdByInfo,
+                preliquidationStatus: 'Pendiente',
+                preliquidationStatusLastUpdate: createdByInfo,
+                digitacionStatus: 'Pendiente',
+                digitacionStatusLastUpdate: createdByInfo,
+                incidentStatus: 'Pendiente',
+                incidentStatusLastUpdate: createdByInfo,
+                revisorAsignado: '',
+                revisorAsignadoLastUpdate: createdByInfo,
+                digitadorAsignado: '',
+                digitadorAsignadoLastUpdate: createdByInfo,
+                worksheetId: neTrimmed,
+                entregadoAforoAt: creationTimestamp,
+            };
+            batch.set(aforoCaseDocRef, aforoCaseData);
     
-          const initialLogRef = doc(collection(aforoCaseDocRef, 'actualizaciones'));
-          const initialLog: AforoCaseUpdate = {
-              updatedAt: Timestamp.now(),
-              updatedBy: user.displayName,
-              field: 'creation',
-              oldValue: null,
-              newValue: 'case_created_from_worksheet',
-              comment: `Hoja de Trabajo ingresada por ${user.displayName}.`,
-          };
-          batch.set(initialLogRef, initialLog);
+            const initialLogRef = doc(collection(aforoCaseDocRef, 'actualizaciones'));
+            const initialLog: AforoCaseUpdate = {
+                updatedAt: Timestamp.now(),
+                updatedBy: user.displayName,
+                field: 'creation',
+                oldValue: null,
+                newValue: 'case_created_from_worksheet',
+                comment: `Hoja de Trabajo ingresada por ${user.displayName}.`,
+            };
+            batch.set(initialLogRef, initialLog);
     
-          if (data.consignee.toUpperCase().trim() === "PSMT NICARAGUA, SOCIEDAD ANONIMA" && (!data.aforador || data.aforador === '-')) {
-              setCaseToAssignAforador(aforoCaseData as AforoCase);
-          }
+            if (data.consignee.toUpperCase().trim() === "PSMT NICARAGUA, SOCIEDAD ANONIMA" && (!data.aforador || data.aforador === '-')) {
+                setCaseToAssignAforador(aforoCaseData as AforoCase);
+            }
     
-          await batch.commit();
-          toast({ title: "Registro Creado", description: `El registro para el NE ${neTrimmed} ha sido guardado.` });
-          router.push('/executive');
-          form.reset();
+            await batch.commit();
+            toast({ title: "Registro Creado", description: `El registro para el NE ${neTrimmed} ha sido guardado.` });
+            router.push('/executive');
+            form.reset();
     
-      } catch (serverError: any) {
-          console.error("Error creating record:", serverError);
-          const permissionError = new FirestorePermissionError({
-              path: `batch write to worksheets/${neTrimmed} and AforoCases/${neTrimmed}`,
-              operation: 'create',
-              requestResourceData: { worksheetData, aforoCaseData: { ne: neTrimmed } },
-          }, serverError);
-          errorEmitter.emit('permission-error', permissionError);
-      } finally {
-          setIsSubmitting(false);
-      }
+        } catch (serverError: any) {
+            console.error("Error creating record:", serverError);
+            const permissionError = new FirestorePermissionError({
+                path: `batch write to worksheets/${neTrimmed} and AforoCases/${neTrimmed}`,
+                operation: 'create',
+                requestResourceData: { worksheetData: data, aforoCaseData: { ne: neTrimmed } },
+            }, serverError);
+            errorEmitter.emit('permission-error', permissionError);
+        } finally {
+            setIsSubmitting(false);
+        }
     }
   };
 
   return (
     <>
     <Card className="w-full max-w-6xl mx-auto">
-      <CardHeader><CardTitle className="text-2xl">{editingWorksheetId ? 'Editar' : 'Nueva'} Hoja de Trabajo</CardTitle><CardDescription>{editingWorksheetId ? `Modificando la hoja de trabajo para el NE: ${editingWorksheetId}` : 'Complete la información para generar el registro.'}</CardDescription></CardHeader>
+      <CardHeader>
+        <CardTitle className="text-2xl">{editingWorksheetId ? 'Editar Hoja de Trabajo' : 'Nueva Hoja de Trabajo'}</CardTitle>
+        <CardDescription>{editingWorksheetId ? `Modificando la hoja de trabajo para el NE: ${editingWorksheetId}` : 'Complete la información para generar el registro.'}</CardDescription>
+      </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
@@ -1097,7 +1089,9 @@ export default function WorksheetPage() {
     return (
         <AppShell>
             <div className="py-2 md:py-5">
-                <WorksheetForm />
+                <React.Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-12 w-12 animate-spin text-primary"/></div>}>
+                    <WorksheetForm />
+                </React.Suspense>
             </div>
         </AppShell>
     )
