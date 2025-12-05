@@ -1,4 +1,3 @@
-
 "use client";
 import { LegalRequestForm } from '@/components/legal/LegalRequestForm';
 import { AppShell } from '@/components/layout/AppShell';
