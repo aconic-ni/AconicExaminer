@@ -109,6 +109,7 @@ export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => v
   const TransportIcon = transportIcons[worksheet.transportMode] || Truck;
   
   const wasModified = worksheet.lastUpdatedAt && worksheet.createdAt && worksheet.lastUpdatedAt.toMillis() !== worksheet.createdAt.toMillis();
+  const isPsmtCase = worksheet.consignee?.toUpperCase().trim() === "PSMT NICARAGUA, SOCIEDAD ANONIMA";
 
   return (
     <>
@@ -159,6 +160,7 @@ export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => v
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 print:grid-cols-3 gap-x-6 gap-y-3 print:gap-x-4 print:gap-y-1 ">
                   <DetailItem label="NE" value={worksheet.ne} icon={FileText} />
+                  <DetailItem label="Referencia" value={worksheet.reference} icon={FileText} />
                   <DetailItem label="Ejecutivo" value={worksheet.executive} icon={User} />
                   <DetailItem label="Peso Bruto" value={worksheet.grossWeight} icon={Weight} />
                   <DetailItem label="Peso Neto" value={worksheet.netWeight} icon={Weight} />
@@ -172,6 +174,7 @@ export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => v
                   {worksheet.appliesTLC && <DetailItem label="Nombre TLC" value={worksheet.tlcName} />}
                   <DetailItem label="Aplica Modexo" value={worksheet.appliesModexo} icon={FileKey} />
                   {worksheet.appliesModexo && <DetailItem label="Código Modexo" value={worksheet.modexoCode} />}
+                   {isPsmtCase && worksheet.aforador && <DetailItem label="Aforador Asignado" value={worksheet.aforador} icon={User} />}
               </div>
           </div>
           
@@ -189,6 +192,14 @@ export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => v
             <h4 className="text-lg font-medium mb-2 text-foreground print:text-sm print:mb-1">Descripción</h4>
             <p className="text-sm p-4 border rounded-md bg-card whitespace-pre-wrap print:border print:p-2 print:text-xs">{worksheet.description}</p>
           </div>
+
+          {/* Observations */}
+          {worksheet.observations && (
+            <div className="print:mt-1">
+              <h4 className="text-lg font-medium mb-2 text-foreground print:text-sm print:mb-1">Observaciones</h4>
+              <p className="text-sm p-4 border rounded-md bg-card whitespace-pre-wrap print:border print:p-2 print:text-xs">{worksheet.observations}</p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 print:grid-cols-2 print:gap-x-4">
             {/* Documents */}
@@ -282,14 +293,6 @@ export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => v
               </div>
           </div>
 
-           {/* Observations */}
-          {worksheet.observations && (
-            <div className="print:mt-1">
-              <h4 className="text-lg font-medium mb-2 text-foreground print:text-sm print:mb-1">Observaciones</h4>
-              <p className="text-sm p-4 border rounded-md bg-card whitespace-pre-wrap print:border print:p-2 print:text-xs">{worksheet.observations}</p>
-            </div>
-          )}
-
           <div className="hidden print:block">
               <Image
                   src="/AconicExaminer/imagenes/FOOTERSOLICITUDETAIL.svg"
@@ -302,15 +305,15 @@ export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => v
           </div>
         </CardContent>
         <CardFooter className="justify-end gap-2 no-print border-t pt-4">
-            <Button asChild variant="outline">
-              <Link href={getEditLink()}>
-                <Edit className="mr-2 h-4 w-4" /> Editar
-              </Link>
-            </Button>
-            <Button type="button" onClick={onClose} variant="outline">Cerrar</Button>
-            <Button type="button" onClick={handlePrint} variant="default">
-                <Printer className="mr-2 h-4 w-4" /> Imprimir
-            </Button>
+          <Button asChild variant="outline">
+            <Link href={getEditLink()}>
+              <Edit className="mr-2 h-4 w-4" /> Editar
+            </Link>
+          </Button>
+          <Button type="button" onClick={onClose} variant="outline">Cerrar</Button>
+          <Button type="button" onClick={handlePrint} variant="default">
+            <Printer className="mr-2 h-4 w-4" /> Imprimir
+          </Button>
         </CardFooter>
       </Card>
     </>
