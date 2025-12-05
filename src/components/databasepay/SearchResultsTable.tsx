@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Loader2, Search, Download, Eye, MessageSquare, Info as InfoIcon, AlertCircle, CheckCircle2, FileSignature, Trash2, ShieldCheck, ListCollapse, RotateCw, MessageSquareText, CheckSquare as CheckSquareIcon } from 'lucide-react';
+import { Loader2, Search, Download, Eye, MessageSquare, Info as InfoIcon, AlertCircle, CheckCircle2, FileSignature, Trash2, ShieldCheck, ListCollapse, RotateCw, MessageSquareText, CheckSquare as CheckSquareIcon, AlertTriangle } from 'lucide-react';
 
 const formatCurrencyFetched = (amount?: number | string | null, currency?: string) => {
     if (amount === undefined || amount === null || amount === '') return 'N/A';
