@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
@@ -81,7 +82,7 @@ const worksheetSchema = z.object({
   facturaNumber: z.string().min(1, "La factura es requerida. Añádala usando el botón 'Añadir Factura'."),
   grossWeight: z.string().optional(),
   netWeight: z.string().optional(),
-  description: z.string().optional(),
+  description: z.string().min(1, "La descripción es requerida."),
   packageNumber: z.string().optional(),
   entryCustoms: z.string().min(1, "Aduana de entrada es requerida."),
   dispatchCustoms: z.string().min(1, "Aduana de despacho es requerida."),
@@ -378,7 +379,6 @@ function WorksheetForm() {
     }
   
     setIsSubmitting(true);
-    const neTrimmed = data.ne.trim().toUpperCase();
     
     if (editingWorksheetId) {
         // UPDATE LOGIC
@@ -403,6 +403,7 @@ function WorksheetForm() {
                 consignee: data.consignee,
                 aforador: data.aforador || '',
                 facturaNumber: data.facturaNumber,
+                description: data.description,
             });
 
             toast({ title: 'Hoja de Trabajo Actualizada', description: `El registro para el NE ${editingWorksheetId} ha sido actualizado.`});
@@ -416,6 +417,7 @@ function WorksheetForm() {
 
     } else {
         // CREATE LOGIC
+        const neTrimmed = data.ne.trim().toUpperCase();
         const worksheetDocRef = doc(db, 'worksheets', neTrimmed);
         const aforoCaseDocRef = doc(db, 'AforoCases', neTrimmed);
     
@@ -632,7 +634,7 @@ function WorksheetForm() {
                 <div className="lg:col-span-3">
                     <FormField control={form.control} name="description" render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Descripción de la Mercancía</FormLabel>
+                        <FormLabel>Descripción de la Mercancía *</FormLabel>
                         <FormControl><Textarea rows={3} placeholder="Breve descripción de la mercancía" {...field} /></FormControl>
                         <FormMessage />
                         </FormItem>
