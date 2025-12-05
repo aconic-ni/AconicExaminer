@@ -290,6 +290,7 @@ export const aduanas = [
     { value: "0340", label: "0340 PUERTO CORINTO" },
     { value: "0230", label: "0230 GUASAULE" },
     { value: "0220", label: "0220 EL ESPINO" },
+    { value: "0240", label: "0240 LAS MANOS"}
     { value: "9010", label: "9010 ADMINISTRACION ZONA FRANCA ASTRO" },
     { value: "0315", label: "0315 EL BLUFF" },
     { value: "9008", label: "9008 ZONA FRANCA EL BLUFF" },
@@ -319,6 +320,7 @@ export const aduanaToShortCode: { [key: string]: string } = {
     "0340": "PC",  // PUERTO CORINTO
     "0230": "GUA", // GUASAULE
     "0220": "EE",  // EL ESPINO
+    "0240": "LM",  // LAS MANOS
     "9010": "AZFA",// ADMINISTRACION ZONA FRANCA ASTRO
     "0315": "EB",  // EL BLUFF
     "9008": "ZFEB",// ZONA FRANCA EL BLUFF
@@ -360,6 +362,9 @@ export const tiposDeclaracion = [
     { value: "ANT4", label: "DECLARACIÓN ANTICIPADA AL ARRIBO DE MERCANCÍAS" },
     { value: "ANT5", label: "DECLARACIÓN ANTICIPADA DE IMPORTACIÓN TEMPORAL" },
     { value: "ANT6", label: "DECLARACIÓN ANTICIPADA DE MERCANCÍAS REIMPORTADAS" },
+    { value: "ANC4", label: "DECLARACIÓN ANTICIPADA DE IMP DEF CORINTO" },
+    { value: "ANC5", label: "DECLARACIÓN ANTICIPADA DE IMP TEMPORAL CORINTO" },
+    { value: "ANC6", label: "DECLARACIÓN ANTICIPADA DE IMP REIMPORTADA CORINTO" },
     { value: "ATA5", label: "ATPA DE BIENES PROVENIENTE DE ZF" },
     { value: "AVO4", label: "DECLARACIÓN DE ABANDONO VOLUNTARIO DE MERCANCÍAS" },
     { value: "DAD7", label: "DEPÓSITO ADUANERO" },
