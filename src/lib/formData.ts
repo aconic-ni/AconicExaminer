@@ -290,7 +290,7 @@ export const aduanas = [
     { value: "0340", label: "0340 PUERTO CORINTO" },
     { value: "0230", label: "0230 GUASAULE" },
     { value: "0220", label: "0220 EL ESPINO" },
-    { value: "0240", label: "0240 LAS MANOS"}
+    { value: "0240", label: "0240 LAS MANOS"},
     { value: "9010", label: "9010 ADMINISTRACION ZONA FRANCA ASTRO" },
     { value: "0315", label: "0315 EL BLUFF" },
     { value: "9008", label: "9008 ZONA FRANCA EL BLUFF" },
