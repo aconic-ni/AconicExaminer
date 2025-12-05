@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
@@ -53,11 +54,30 @@ const DetailItem: React.FC<{ label: string; value?: string | number | null | boo
   );
 };
 
-const transportIcons = {
-    aereo: Plane,
-    maritimo: Anchor,
-    frontera: Globe,
-    terrestre: Truck,
+const TransportDetailItem: React.FC<{ label: string; value?: string | number | null; className?: string }> = ({ label, value, className }) => (
+    <div className={cn("flex justify-between items-baseline border-b border-gray-300 py-1 print:py-0", className)}>
+        <span className="text-xs font-semibold text-gray-500 print:text-[8pt]">{label}</span>
+        <p className="text-xs font-medium text-gray-800 print:text-[9pt]">{value || ''}</p>
+    </div>
+);
+
+
+const SignatureSection: React.FC<{ title: string; subtitle?: string; className?: string, children?: React.ReactNode }> = ({ title, subtitle, className, children }) => (
+  <div className={className}>
+     <div className="text-center text-xs text-gray-600 print:text-[7pt] mb-1">
+        {children}
+    </div>
+    <div className="h-8 border-b border-gray-400 print:h-6"></div>
+    <p className="text-center text-xs font-semibold mt-1 print:text-[8pt]">{title}</p>
+    {subtitle && <p className="text-center text-xs text-gray-600 print:text-[7pt]">{subtitle}</p>}
+  </div>
+);
+
+const transportIcons: { [key: string]: React.ElementType } = {
+  aereo: Plane,
+  maritimo: Anchor,
+  frontera: Truck,
+  terrestre: Truck,
 };
 
 export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => void; }> = ({ worksheet, onClose }) => {
@@ -65,7 +85,7 @@ export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => v
 
   useEffect(() => {
     const fetchAgents = async () => {
-        const q = query(collection(db, 'users'), where('role', '==', 'agente'));
+        const q = query(collection(db, 'users'), where('roleTitle', '==', 'agente aduanero'));
         const querySnapshot = await getDocs(q);
         const agents = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser));
         setAgentesAduaneros(agents);
@@ -180,7 +200,7 @@ export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => v
           
           <div className="pt-2">
             <h4 className="text-lg font-medium mb-2 text-foreground print:text-sm print:mb-1">Documento de Transporte</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-md print:p-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 print:grid-cols-3 gap-4 p-4 border rounded-md print:p-2">
                 <DetailItem label="Tipo" value={getTransportDocTypeLabel(worksheet.transportDocumentType)} />
                 <DetailItem label="Compañía" value={worksheet.transportCompany} />
                 <DetailItem label="Número" value={worksheet.transportDocumentNumber} />
@@ -292,7 +312,6 @@ export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => v
                 </div>
               </div>
           </div>
-
           <div className="hidden print:block">
               <Image
                   src="/AconicExaminer/imagenes/FOOTERSOLICITUDETAIL.svg"
@@ -319,3 +338,5 @@ export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => v
     </>
   );
 };
+
+    
