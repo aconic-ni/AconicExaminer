@@ -1,6 +1,5 @@
-
 "use client";
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, Suspense } from 'react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -82,7 +81,7 @@ const worksheetSchema = z.object({
   facturaNumber: z.string().min(1, "La factura es requerida. Añádala usando el botón 'Añadir Factura'."),
   grossWeight: z.string().optional(),
   netWeight: z.string().optional(),
-  description: z.string().min(1, "La descripción es requerida."),
+  description: z.string().optional(),
   packageNumber: z.string().optional(),
   entryCustoms: z.string().min(1, "Aduana de entrada es requerida."),
   dispatchCustoms: z.string().min(1, "Aduana de despacho es requerida."),
@@ -96,7 +95,7 @@ const worksheetSchema = z.object({
   documents: z.array(worksheetDocumentSchema),
   requiredPermits: z.array(requiredPermitSchema),
   operationType: z.enum(['importacion', 'exportacion']).optional().nullable(),
-  patternRegime: z.string().min(1, "El Modelo (Patrón) es requerido."),
+  patternRegime: z.string().optional(),
   subRegime: z.string().optional(),
   isJointOperation: z.boolean().default(false),
   jointNe: z.string().optional(),
@@ -1049,7 +1048,9 @@ export default function WorksheetPage() {
     return (
         <AppShell>
             <div className="py-2 md:py-5">
-                <WorksheetForm />
+                <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-12 w-12 animate-spin text-primary"/></div>}>
+                    <WorksheetForm />
+                </Suspense>
             </div>
         </AppShell>
     )
