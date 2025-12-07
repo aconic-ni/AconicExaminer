@@ -2,13 +2,13 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, Timestamp, orderBy, doc, updateDoc, addDoc, getDocs, writeBatch, getCountFromServer } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, orderBy, doc, updateDoc, addDoc, getDocs, writeBatch, getCountFromServer, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import type { AforoCase, AforoCaseUpdate, AppUser, AforadorStatus, Worksheet, DigitacionStatus, PreliquidationStatus, LastUpdateInfo, WorksheetWithCase } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Inbox, History, Edit, User, PlusSquare, FileText, Info, Send, AlertTriangle, CheckSquare, ChevronsUpDown, Check, ChevronDown, ChevronRight, BookOpen, Search, MessageSquare, FileSignature, Repeat, Eye, Users, Scale, UserCheck } from 'lucide-react';
+import { Loader2, Inbox, History, Edit, User, PlusSquare, FileText, Info, Send, AlertTriangle, CheckSquare, ChevronsUpDown, Check, ChevronDown, ChevronRight, BookOpen, Search, MessageSquare, FileSignature, Repeat, Eye, Users, Scale, UserCheck, Shield, ShieldCheck, FileDigit, Truck, Anchor, Plane } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { format, toDate, isSameDay, startOfDay, endOfDay } from 'date-fns';
+import { format, toDate, isSameDay, startOfDay, endOfDay, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '../ui/button';
@@ -35,8 +35,9 @@ import type { SecurityRuleContext } from '@/firebase/errors';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { IncidentReportModal } from './IncidentReportModal';
 import { IncidentReportDetails } from './IncidentReportDetails';
-import { WorksheetDetails } from '../executive/WorksheetDetails';
 import { DatePickerWithTime } from '@/components/reports/DatePickerWithTime';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
+import { WorksheetDetailModal } from './WorksheetDetailModal';
 
 interface DailyAforoCasesTableProps {
   filters: {
@@ -53,8 +54,11 @@ interface DailyAforoCasesTableProps {
 const formatDate = (date: Date | Timestamp | null | undefined, includeTime: boolean = true): string => {
     if (!date) return 'N/A';
     const d = (date as Timestamp)?.toDate ? (date as Timestamp).toDate() : (date as Date);
-    const formatString = includeTime ? "dd/MM/yy HH:mm" : "dd/MM/yy";
-    return format(d, formatString, { locale: es });
+    if (date instanceof Date && !isNaN(date.getTime())) {
+        const formatString = includeTime ? 'dd/MM/yy HH:mm' : 'dd/MM/yy';
+        return format(d, formatString, { locale: es });
+    }
+    return 'Fecha Inválida';
 };
 
 const LastUpdateTooltip = ({ lastUpdate, caseCreation }: { lastUpdate?: LastUpdateInfo | null, caseCreation: Timestamp }) => {
@@ -95,6 +99,8 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
   const [selectedIncidentForDetails, setSelectedIncidentForDetails] = useState<AforoCase | null>(null);
   const [assignmentModal, setAssignmentModal] = useState<{ isOpen: boolean; case: AforoCase | null; type: 'aforador' | 'revisor' }>({ isOpen: false, case: null, type: 'aforador' });
   const [involvedUsersModal, setInvolvedUsersModal] = useState<{ isOpen: boolean; caseData: AforoCase | null }>({ isOpen: false, caseData: null });
+  const [caseAuditLogs, setCaseAuditLogs] = useState<Map<string, AforoCaseUpdate[]>>(new Map());
+  const [bulkActionResult, setBulkActionResult] = useState<{ isOpen: boolean, success: string[], skipped: string[] }>({ isOpen: false, success: [], skipped: [] });
 
 
   const handleAutoSave = useCallback(async (caseId: string, field: keyof AforoCase, value: any, isTriggerFromFieldUpdate: boolean = false) => {
@@ -267,7 +273,7 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
   
     const fetchAssignableUsers = async () => {
         const usersMap = new Map<string, AppUser>();
-        const rolesToFetch = ['aforador', 'coordinadora', 'supervisor'];
+        const rolesToFetch = ['aforador', 'coordinadora', 'supervisor', 'digitador'];
         const agentRoleTitle = 'agente aduanero';
         const psmtSupervisorTitle = 'PSMT';
 
@@ -315,19 +321,31 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
         const worksheetsSnap = await getDocs(collection(db, 'worksheets'));
         const worksheetsMap = new Map(worksheetsSnap.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() } as Worksheet]));
 
-        const examenesSnap = await getDocs(collection(db, 'examenesPrevios'));
-        const examenesMap = new Map(examenesSnap.docs.map(doc => [doc.id, doc.data() as any]));
-        
         const combinedData = aforoCasesData
             .map(caseItem => ({
                 ...caseItem,
                 worksheet: worksheetsMap.get(caseItem.worksheetId || '') || null,
-                examenPrevio: examenesMap.get(caseItem.id) || null,
             }))
-            .filter(c => 
+             .filter(c => 
                 c.worksheet?.worksheetType === 'hoja_de_trabajo' || 
                 c.worksheet?.worksheetType === undefined
             );
+            
+        const auditLogPromises = combinedData.map(async (caseItem) => {
+            const updatesRef = collection(db, 'AforoCases', caseItem.id, 'actualizaciones');
+            const updatesSnapshot = await getDocs(query(updatesRef, orderBy('updatedAt', 'desc')));
+            return {
+                caseId: caseItem.id,
+                logs: updatesSnapshot.docs.map(doc => doc.data() as AforoCaseUpdate)
+            };
+        });
+        
+        const auditLogsResults = await Promise.all(auditLogPromises);
+        const newAuditLogs = new Map<string, AforoCaseUpdate[]>();
+        auditLogsResults.forEach(result => {
+            newAuditLogs.set(result.caseId, result.logs);
+        });
+        setCaseAuditLogs(newAuditLogs);
 
         let filtered = combinedData;
         if (filters.ne) {
@@ -386,9 +404,47 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
      }
   }
 
-  const handleAssignToDigitization = async (caseItem: AforoCase) => {
+  const handleAssignToDigitization = async (caseItem: AforoCase, force: boolean = false) => {
     if (!user || !user.displayName) return;
+    
+    // PSMT Supervisor Logic for single case
+    const isPsmtCase = caseItem.consignee.toUpperCase().trim() === "PSMT NICARAGUA, SOCIEDAD ANONIMA";
+    const isPsmtSupervisor = user.role === 'supervisor' && user.roleTitle === 'PSMT';
+    const acuseLog = caseAuditLogs.get(caseItem.id)?.find(log => log.newValue === 'worksheet_received');
+    
+    if (isPsmtSupervisor && isPsmtCase && acuseLog && !force) {
+        // Automatically approve and send
+        setIsLoading(true);
+        const batch = writeBatch(db);
+        const caseDocRef = doc(db, 'AforoCases', caseItem.id);
+        const updatesSubcollectionRef = collection(caseDocRef, 'actualizaciones');
+        const now = Timestamp.now();
+        const userInfo = { by: user.displayName, at: now };
 
+        batch.update(caseDocRef, {
+            revisorStatus: 'Aprobado',
+            preliquidationStatus: 'Aprobada',
+            digitacionStatus: 'Pendiente de Digitación',
+            revisorStatusLastUpdate: userInfo,
+            preliquidationStatusLastUpdate: userInfo,
+            digitacionStatusLastUpdate: userInfo,
+        });
+
+        // Add logs for each auto-approval
+        const logComment = "Aprobación y envío automático para caso PSMT con acuse.";
+        batch.set(doc(updatesSubcollectionRef), { updatedAt: now, updatedBy: user.displayName, field: 'revisorStatus', oldValue: caseItem.revisorStatus, newValue: 'Aprobado', comment: logComment });
+        batch.set(doc(updatesSubcollectionRef), { updatedAt: now, updatedBy: user.displayName, field: 'preliquidationStatus', oldValue: caseItem.preliquidationStatus, newValue: 'Aprobada', comment: logComment });
+        batch.set(doc(updatesSubcollectionRef), { updatedAt: now, updatedBy: user.displayName, field: 'digitacionStatus', oldValue: caseItem.digitacionStatus, newValue: 'Pendiente de Digitación', comment: logComment });
+
+        try {
+            await batch.commit();
+            toast({ title: 'Proceso PSMT Acelerado', description: `Caso ${caseItem.ne} aprobado y enviado a digitación.` });
+        } catch(e) { console.error(e); toast({ title: "Error en flujo PSMT", variant: "destructive"}); } 
+        finally { setIsLoading(false); }
+        return;
+    }
+
+    // Standard logic
     if (caseItem.revisorStatus !== 'Aprobado') {
         toast({ title: "Acción no permitida", description: "El caso debe estar aprobado por el revisor.", variant: "destructive" });
         return;
@@ -398,9 +454,6 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
         return;
     }
     
-    // Check for PSMT supervisor logic
-    const isPsmtCase = caseItem.consignee.toUpperCase().trim() === "PSMT NICARAGUA, SOCIEDAD ANONIMA";
-    const isPsmtSupervisor = user.role === 'supervisor' && user.roleTitle === 'PSMT';
     const isGeneralSupervisor = user.role === 'supervisor' && user.roleTitle !== 'PSMT';
 
     if (isGeneralSupervisor && isPsmtCase) {
@@ -438,6 +491,86 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
         toast({title: "Error", description: "No se pudo asignar el caso a digitación.", variant: "destructive"});
      }
   };
+
+  const handleSendSelectedToDigitization = async () => {
+    if (!user?.displayName || selectedRows.length === 0) return;
+
+    const allSelectedArePsmt = selectedRows.every(id => displayCases.find(c => c.id === id)?.consignee.toUpperCase().trim() === "PSMT NICARAGUA, SOCIEDAD ANONIMA");
+
+    if (allSelectedArePsmt) {
+        // If ALL selected are PSMT, run the special PSMT flow for those with acuse
+        const successCases: string[] = [];
+        const skippedCases: string[] = [];
+        const batch = writeBatch(db);
+        const now = Timestamp.now();
+        const userInfo = { by: user.displayName, at: now };
+
+        for (const caseId of selectedRows) {
+            const caseItem = displayCases.find(c => c.id === caseId);
+            if (!caseItem) continue;
+            
+            const acuseLog = caseAuditLogs.get(caseId)?.find(log => log.newValue === 'worksheet_received');
+            if (acuseLog) {
+                const caseDocRef = doc(db, 'AforoCases', caseId);
+                const updatesSubcollectionRef = collection(caseDocRef, 'actualizaciones');
+                batch.update(caseDocRef, {
+                    revisorStatus: 'Aprobado',
+                    preliquidationStatus: 'Aprobada',
+                    digitacionStatus: 'Pendiente de Digitación',
+                    revisorStatusLastUpdate: userInfo,
+                    preliquidationStatusLastUpdate: userInfo,
+                    digitacionStatusLastUpdate: userInfo,
+                });
+                const logComment = `Envío masivo: Aprobación y envío automático para caso PSMT con acuse.`;
+                batch.set(doc(updatesSubcollectionRef), { updatedAt: now, updatedBy: user.displayName, field: 'revisorStatus', oldValue: caseItem.revisorStatus, newValue: 'Aprobado', comment: logComment });
+                batch.set(doc(updatesSubcollectionRef), { updatedAt: now, updatedBy: user.displayName, field: 'preliquidationStatus', oldValue: caseItem.preliquidationStatus, newValue: 'Aprobada', comment: logComment });
+                batch.set(doc(updatesSubcollectionRef), { updatedAt: now, updatedBy: user.displayName, field: 'digitacionStatus', oldValue: caseItem.digitacionStatus, newValue: 'Pendiente de Digitación', comment: logComment });
+                successCases.push(caseItem.ne);
+            } else {
+                skippedCases.push(caseItem.ne);
+            }
+        }
+        
+        if (successCases.length > 0) {
+            await batch.commit();
+        }
+        setBulkActionResult({ isOpen: true, success: successCases, skipped: skippedCases });
+        setSelectedRows([]);
+
+    } else {
+        // If it's a mixed selection, only process non-PSMT cases that are ready.
+        const nonPsmtReadyCases = selectedRows
+            .map(id => displayCases.find(c => c.id === id))
+            .filter(c => c && c.consignee.toUpperCase().trim() !== "PSMT NICARAGUA, SOCIEDAD ANONIMA" && c.revisorStatus === 'Aprobado' && c.preliquidationStatus === 'Aprobada');
+        
+        const skippedPsmtCases = selectedRows
+            .map(id => displayCases.find(c => c.id === id))
+            .filter(c => c && c.consignee.toUpperCase().trim() === "PSMT NICARAGUA, SOCIEDAD ANONIMA")
+            .map(c => c!.ne);
+
+        if (nonPsmtReadyCases.length === 0) {
+            setBulkActionResult({ isOpen: true, success: [], skipped: skippedPsmtCases });
+            return;
+        }
+
+        const batch = writeBatch(db);
+        const now = Timestamp.now();
+        const userInfo = { by: user.displayName, at: now };
+
+        nonPsmtReadyCases.forEach(caseItem => {
+             const caseDocRef = doc(db, 'AforoCases', caseItem!.id);
+             const updatesSubcollectionRef = collection(caseDocRef, 'actualizaciones');
+             batch.update(caseDocRef, { digitacionStatus: 'Pendiente de Digitación', digitacionStatusLastUpdate: userInfo });
+             const logComment = `Envío masivo a digitación.`;
+             batch.set(doc(updatesSubcollectionRef), { updatedAt: now, updatedBy: user.displayName, field: 'digitacionStatus', oldValue: caseItem!.digitacionStatus, newValue: 'Pendiente de Digitación', comment: logComment });
+        });
+
+        await batch.commit();
+        setBulkActionResult({ isOpen: true, success: nonPsmtReadyCases.map(c => c!.ne), skipped: skippedPsmtCases });
+        setSelectedRows([]);
+    }
+  };
+
 
   const handleSearchPrevio = (ne: string) => {
     router.push(`/database?ne=${ne}`);
@@ -479,9 +612,6 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
   const openIncidentModal = (caseItem: AforoCase) => setSelectedCaseForIncident(caseItem);
   const openObservationModal = (caseItem: AforoCase) => {
     if (caseItem) {
-        // Here you can implement logic to open a specific observation modal
-        // For example, based on who is logged in.
-        // For now, let's assume it's always the aforador's comment modal.
         openAforadorCommentModal(caseItem);
     }
   };
@@ -508,32 +638,6 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
     switch(status) { case 'En revisión': return 'default'; case 'Incompleto': return 'destructive'; case 'En proceso': return 'secondary'; case 'Pendiente ': return 'destructive'; default: return 'outline'; }
   };
   
-  const getIncidentStatusBadgeVariant = (status?: IncidentStatus) => {
-    switch(status) {
-        case 'Aprobada': return 'default';
-        case 'Rechazada': return 'destructive';
-        case 'Pendiente': return 'secondary';
-        default: return 'outline';
-    }
-  }
-  
-  const getPreliquidationStatusBadge = (status?: PreliquidationStatus) => {
-    switch(status) {
-      case 'Aprobada': return <Badge variant="default" className="bg-green-600">Aprobada</Badge>;
-      default: return <Badge variant="outline">Pendiente</Badge>;
-    }
-  };
-  
-  const getDigitacionBadge = (status?: DigitacionStatus, declaracion?: string | null) => {
-    if (status === 'Trámite Completo') {
-      return <Badge variant="default" className="bg-green-600">{declaracion || 'Trámite Completo'}</Badge>
-    }
-    if (status) {
-      return <Badge variant={status === 'En Proceso' ? 'secondary' : 'outline'}>{status}</Badge>
-    }
-    return <Badge variant="outline">Pendiente</Badge>;
-  }
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-10">
@@ -554,13 +658,15 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
   }
   
   const canEdit = user?.role === 'admin' || user?.role === 'coordinadora' || user?.roleTitle === 'supervisor';
+  const isDigitador = user?.role === 'aforador';
   
   if (isMobile) {
     return (
         <div className="space-y-4">
              <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon" onClick={collapseAllRows} className="h-8 w-8"><ChevronsUpDown className="h-4 w-4" /></Button>
-                <Button variant="outline" size="sm" onClick={handleBulkAcknowledge} disabled={selectedRows.length === 0}>Acuse Masivo ({selectedRows.length})</Button>
+                {canEdit && <Button variant="outline" size="sm" onClick={handleBulkAcknowledge} disabled={selectedRows.length === 0}>Acuse Masivo ({selectedRows.length})</Button>}
+                {canEdit && <Button variant="secondary" size="sm" onClick={handleSendSelectedToDigitization} disabled={selectedRows.length === 0}>Enviar a Digitación ({selectedRows.length})</Button>}
             </div>
             {displayCases.map(caseItem => (
                 <MobileAforoCard
@@ -579,6 +685,7 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
                     handleAssignToDigitization={handleAssignToDigitization}
                     handleViewWorksheet={handleViewWorksheet}
                     setSelectedIncidentForDetails={setSelectedIncidentForDetails}
+                    handleAcknowledgeWorksheet={handleAcknowledgeWorksheet}
                 />
             ))}
         </div>
@@ -591,7 +698,8 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
     <div className="overflow-x-auto table-container rounded-lg border">
       <div className="flex items-center gap-2 p-2">
           <Button variant="ghost" size="icon" onClick={collapseAllRows} className="h-8 w-8"><ChevronsUpDown className="h-4 w-4" /></Button>
-          <Button variant="outline" size="sm" onClick={handleBulkAcknowledge} disabled={selectedRows.length === 0}>Enviar Acuse Masivo ({selectedRows.length})</Button>
+          {canEdit && <Button variant="outline" size="sm" onClick={handleBulkAcknowledge} disabled={selectedRows.length === 0}>Enviar Acuse ({selectedRows.length})</Button>}
+          {canEdit && <Button variant="secondary" size="sm" onClick={handleSendSelectedToDigitization} disabled={selectedRows.length === 0}>Enviar a Digitación ({selectedRows.length})</Button>}
       </div>
       <Table>
         <TableHeader>
@@ -599,8 +707,8 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
             <TableHead className="w-12"><Checkbox checked={selectedRows.length > 0 && selectedRows.length === displayCases.length} onCheckedChange={toggleSelectAll}/></TableHead>
             <TableHead className="w-12"></TableHead>
             <TableHead>Acciones</TableHead>
+            <TableHead>Acuse</TableHead>
             <TableHead>NE</TableHead>
-            <TableHead>Insignias</TableHead>
             <TableHead>Ejecutivo</TableHead>
             <TableHead>Consignatario</TableHead>
             <TableHead>Aforador</TableHead>
@@ -608,6 +716,7 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
             <TableHead>Estatus Aforador</TableHead>
             <TableHead>Revisor Asignado</TableHead>
             <TableHead>Estatus Revisor</TableHead>
+            <TableHead>Preliquidación</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -626,9 +735,11 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
             const isPatternValidated = caseItem.isPatternValidated === true;
             const allowPatternEdit = caseItem.revisorStatus === 'Rechazado';
 
+            const acuseLog = caseAuditLogs.get(caseItem.id)?.find(log => log.newValue === 'worksheet_received');
+
             return (
             <React.Fragment key={caseItem.id}>
-            <TableRow className={rowClass}>
+            <TableRow className={rowClass} data-state={selectedRows.includes(caseItem.id) ? "selected" : undefined}>
               <TableCell><Checkbox checked={selectedRows.includes(caseItem.id)} onCheckedChange={() => toggleRowSelection(caseItem.id)}/></TableCell>
               <TableCell>
                   {canExpandRow && (
@@ -654,7 +765,7 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
                         <DropdownMenuItem onSelect={() => handleSearchPrevio(caseItem.ne)}>
                             <Search className="mr-2 h-4 w-4" /> Buscar Previo
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => openAforadorCommentModal(caseItem)}>
+                        <DropdownMenuItem onSelect={() => openObservationModal(caseItem)}>
                             <MessageSquare className="mr-2 h-4 w-4" /> Observación
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => openHistoryModal(caseItem)}>
@@ -688,6 +799,26 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
                     </DropdownMenuContent>
                  </DropdownMenu>
               </TableCell>
+               <TableCell>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        {acuseLog ? (
+                          <ShieldCheck className="h-5 w-5 text-blue-500" />
+                        ) : (
+                          <Shield className="h-5 w-5 text-gray-400" />
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {acuseLog ? (
+                        <p>Recibido por {acuseLog.updatedBy} el {formatDate(acuseLog.updatedAt)}</p>
+                      ) : (
+                        <p>Pendiente de acuse de recibo</p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+              </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
                     <span className="font-medium">{caseItem.ne}</span>
@@ -702,9 +833,6 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
                         </Tooltip>
                     )}
                 </div>
-              </TableCell>
-              <TableCell>
-                <StatusBadges caseData={caseItem} />
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-1">
@@ -778,10 +906,13 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
                         <LastUpdateTooltip lastUpdate={caseItem.revisorStatusLastUpdate} caseCreation={caseItem.createdAt}/>
                     </div>
               </TableCell>
+              <TableCell>
+                    <Badge variant={caseItem.preliquidationStatus === 'Aprobada' ? 'default' : 'outline'}>{caseItem.preliquidationStatus || 'Pendiente'}</Badge>
+              </TableCell>
             </TableRow>
              {isExpanded && canExpandRow && (
                 <TableRow className="bg-muted/30 hover:bg-muted/40">
-                  <TableCell colSpan={14} className="p-0">
+                  <TableCell colSpan={15} className="p-0">
                     <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="flex items-end gap-2">
                           <div className="flex-grow">
@@ -939,6 +1070,19 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
             caseData={selectedCaseForIncident}
         />
     )}
+    {selectedIncidentForDetails && (
+        <IncidentReportDetails
+            caseData={selectedIncidentForDetails}
+            onClose={() => setSelectedIncidentForDetails(null)}
+        />
+    )}
+    {selectedWorksheet && (
+        <WorksheetDetailModal
+            isOpen={!!selectedWorksheet}
+            onClose={() => setSelectedWorksheet(null)}
+            worksheet={selectedWorksheet}
+        />
+    )}
     {assignmentModal.isOpen && assignmentModal.case && (
         <AssignUserModal
             isOpen={assignmentModal.isOpen}
@@ -946,7 +1090,7 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
             caseData={assignmentModal.case}
             assignableUsers={
                 assignmentModal.type === 'aforador'
-                    ? assignableUsers.filter(u => u.role === 'aforador' || u.role === 'supervisor')
+                    ? assignableUsers.filter(u => u.role === 'aforador' || u.role === 'coordinadora' || u.role === 'supervisor')
                     : assignableUsers.filter(u => u.roleTitle === 'agente aduanero' || (u.role === 'supervisor' && u.roleTitle === 'PSMT'))
             }
             onAssign={(caseId, userName) => handleAssignUser(caseId, userName, assignmentModal.type)}
@@ -962,9 +1106,38 @@ export function DailyAforoCasesTable({ filters, setAllFetchedCases, displayCases
           allUsers={assignableUsers}
         />
     )}
+     <AlertDialog open={bulkActionResult.isOpen} onOpenChange={(isOpen) => setBulkActionResult(prev => ({...prev, isOpen}))}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Resultado del Envío Masivo</AlertDialogTitle>
+                <AlertDialogDescription>
+                    <div className="space-y-4 max-h-60 overflow-y-auto">
+                        {bulkActionResult.success.length > 0 && (
+                            <div>
+                                <p className="font-semibold text-green-600">Casos enviados a digitación exitosamente:</p>
+                                <ul className="list-disc list-inside text-sm text-muted-foreground">
+                                    {bulkActionResult.success.map(ne => <li key={ne}>{ne}</li>)}
+                                </ul>
+                            </div>
+                        )}
+                        {bulkActionResult.skipped.length > 0 && (
+                             <div>
+                                <p className="font-semibold text-amber-600">Casos omitidos (no cumplían los criterios):</p>
+                                <ul className="list-disc list-inside text-sm text-muted-foreground">
+                                    {bulkActionResult.skipped.map(ne => <li key={ne}>{ne}</li>)}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogAction onClick={() => setBulkActionResult({ isOpen: false, success: [], skipped: [] })}>Entendido</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
-
 
     
