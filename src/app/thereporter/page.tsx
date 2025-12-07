@@ -22,8 +22,8 @@ import { DigitizationCasesTable } from '@/components/reporter/DigitizationCasesT
 import { Input } from '@/components/ui/input';
 import { DatePickerWithRange } from '@/components/reports/DatePickerWithRange';
 import type { DateRange } from 'react-day-picker';
-import type { AforoCase, AppUser, AforoCaseUpdate, Worksheet } from '@/types';
-import { collection, getDocs, query, where, collectionGroup, orderBy, writeBatch, doc, getDoc } from 'firebase/firestore';
+import type { AforoCase, AppUser, AforoCaseUpdate, Worksheet, WorksheetWithCase } from '@/types';
+import { collection, getDocs, query, where, collectionGroup, orderBy, writeBatch, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { downloadAforoReportAsExcel } from '@/lib/fileExporterAforo';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -38,7 +38,7 @@ const months = [
     { value: 0, label: 'Enero' }, { value: 1, label: 'Febrero' }, { value: 2, label: 'Marzo' },
     { value: 3, label: 'Abril' }, { value: 4, label: 'Mayo' }, { value: 5, label: 'Junio' },
     { value: 6, label: 'Julio' }, { value: 7, label: 'Agosto' }, { value: 8, label: 'Septiembre' },
-    { value: 9, label: 'Octubre' }, { value: 10, label: 'Noviembre' }, { value: 11, label: 'Diciembre' }
+    { value: 9, 'label': 'Octubre' }, { value: 10, label: 'Noviembre' }, { value: 11, label: 'Diciembre' }
 ];
 
 const currentYear = new Date().getFullYear();
@@ -68,7 +68,7 @@ export default function TheReporterPage() {
     dateFilterType: 'range' as DateFilterType,
   });
 
-  const [allFetchedCases, setAllFetchedCases] = useState<AforoCase[]>([]);
+  const [allFetchedCases, setAllFetchedCases] = useState<WorksheetWithCase[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const [isSendingToDigitization, setIsSendingToDigitization] = useState(false);
 
@@ -286,8 +286,8 @@ export default function TheReporterPage() {
                                     </Button>
                                     <Button variant="outline" onClick={clearFilters}>Limpiar Filtros</Button>
                                     <Button onClick={handleExport} disabled={filteredCases.length === 0 || isExporting}>
-                                        {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
-                                        {isExporting ? 'Exportando...' : 'Exportar'}
+                                       {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
+                                       {isExporting ? 'Exportando...' : 'Exportar'}
                                     </Button>
                                 </div>
                             </div>
