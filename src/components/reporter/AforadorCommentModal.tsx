@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -37,7 +38,7 @@ export function AforadorCommentModal({ isOpen, onClose, caseData }: AforadorComm
     defaultValues: { comment: caseData.aforadorComment || '' },
   });
 
-  const canEdit = user?.role === 'aforador' || user?.role === 'admin' || user?.role === 'coordinadora';
+  const canEdit = user?.role === 'aforador' || user?.role === 'admin' || user?.role === 'coordinadora' || user?.role === 'supervisor';
 
   const onSubmit = async (data: CommentFormData) => {
     if (!user || !user.displayName) {
