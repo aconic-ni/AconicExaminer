@@ -1,9 +1,9 @@
 "use client";
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, Timestamp, orderBy, doc, updateDoc, addDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, orderBy, doc, updateDoc, addDoc, getDocs, writeBatch, getCountFromServer } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
-import type { AforoCase, DigitacionStatus, AforoCaseUpdate, AppUser, LastUpdateInfo } from '@/types';
+import type { AforoCase, DigitacionStatus, AforoCaseUpdate, AppUser, LastUpdateInfo, Worksheet, WorksheetWithCase } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Inbox, History, Edit, User, PlusSquare, FileText, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -19,19 +19,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { AssignUserModal } from './AssignUserModal';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MobileDigitacionCard } from './MobileDigitacionCard';
 
 interface DigitizationCasesTableProps {
   filters: {
     ne?: string;
   };
-  setAllFetchedCases: (cases: AforoCase[]) => void;
-  displayCases: AforoCase[];
+  setAllFetchedCases: (cases: WorksheetWithCase[]) => void;
+  displayCases: WorksheetWithCase[];
 }
 
 const formatDate = (date: Date | Timestamp | null | undefined): string => {
     if (!date) return 'N/A';
     const d = (date as Timestamp)?.toDate ? (date as Timestamp).toDate() : (date as Date);
-    return format(d, 'dd/MM/yy HH:mm', { locale: es });
+    if (d instanceof Date && !isNaN(d.getTime())) {
+        const formatString = 'dd/MM/yy HH:mm';
+        return format(d, formatString, { locale: es });
+    }
+    return 'Fecha Inválida';
 };
 
 const LastUpdateTooltip = ({ lastUpdate, caseCreation }: { lastUpdate?: LastUpdateInfo | null, caseCreation: Timestamp }) => {
@@ -57,6 +63,7 @@ const LastUpdateTooltip = ({ lastUpdate, caseCreation }: { lastUpdate?: LastUpda
 export function DigitizationCasesTable({ filters, setAllFetchedCases, displayCases }: DigitizationCasesTableProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [assignableUsers, setAssignableUsers] = useState<AppUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savingState, setSavingState] = useState<{ [key: string]: boolean }>({});
@@ -128,21 +135,19 @@ export function DigitizationCasesTable({ filters, setAllFetchedCases, displayCas
 
     const fetchAssignableUsers = async () => {
         const usersMap = new Map<string, AppUser>();
-        const rolesToFetch = ['aforador', 'coordinadora', 'supervisor'];
-        const roleQueries = rolesToFetch.map(role => query(collection(db, 'users'), where('role', '==', role)));
+        const rolesToFetch = ['aforador', 'coordinadora', 'supervisor', 'digitador'];
         
         try {
-            const querySnapshots = await Promise.all(roleQueries.map(q => getDocs(q)));
-            querySnapshots.forEach(snapshot => {
-                snapshot.forEach(doc => {
-                    const userData = { uid: doc.id, ...doc.data() } as AppUser;
-                    if (!usersMap.has(userData.uid) && userData.displayName) {
-                        usersMap.set(userData.uid, userData);
-                    }
-                });
+            const usersQuery = query(collection(db, 'users'), where('role', 'in', rolesToFetch));
+            const querySnapshot = await getDocs(usersQuery);
+            querySnapshot.forEach(doc => {
+                const userData = { uid: doc.id, ...doc.data() } as AppUser;
+                if (!usersMap.has(userData.uid) && userData.displayName) {
+                    usersMap.set(userData.uid, userData);
+                }
             });
             setAssignableUsers(Array.from(usersMap.values()));
-        } catch(e) {
+        } catch (e) {
             console.error("Error fetching users for digitization table", e);
         }
     };
@@ -163,12 +168,32 @@ export function DigitizationCasesTable({ filters, setAllFetchedCases, displayCas
         );
     }
 
-    const unsubscribe = onSnapshot(qCases, (snapshot) => {
-        const fetchedCases: AforoCase[] = [];
-        snapshot.forEach((doc) => {
-            fetchedCases.push({ id: doc.id, ...doc.data() } as AforoCase);
-        });
-        setAllFetchedCases(fetchedCases);
+    const unsubscribe = onSnapshot(qCases, async (snapshot) => {
+        const aforoCasesData: AforoCase[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AforoCase));
+        
+        const worksheetsSnap = await getDocs(collection(db, 'worksheets'));
+        const worksheetsMap = new Map(worksheetsSnap.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() } as Worksheet]));
+
+        const casesWithWorksheetInfo = aforoCasesData
+            .map(caseItem => ({
+                ...caseItem,
+                worksheet: worksheetsMap.get(caseItem.worksheetId || '') || null,
+            }))
+             .filter(c => 
+                c.worksheet?.worksheetType === 'hoja_de_trabajo' || 
+                c.worksheet?.worksheetType === undefined
+            );
+
+
+        let filtered = casesWithWorksheetInfo;
+        
+        if (filters.ne) {
+            filtered = filtered.filter(c => c.ne.toUpperCase().includes(filters.ne!.toUpperCase()));
+        }
+
+        filtered.sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0));
+        
+        setAllFetchedCases(filtered);
         setIsLoading(false);
     }, (error) => {
         console.error("Error fetching digitization cases: ", error);
@@ -218,7 +243,28 @@ export function DigitizationCasesTable({ filters, setAllFetchedCases, displayCas
   }
   
   const canEdit = user?.role === 'admin' || user?.role === 'coordinadora' || user?.roleTitle === 'supervisor';
-  const isDigitador = user?.role === 'aforador';
+  const isDigitador = user?.role === 'digitador';
+  
+  if (isMobile) {
+    return (
+        <div className="space-y-4">
+            {displayCases.map((caseItem) => (
+                <MobileDigitacionCard 
+                    key={caseItem.id}
+                    caseItem={caseItem}
+                    canEdit={canEdit}
+                    isDigitador={isDigitador}
+                    savingState={savingState}
+                    handleStatusChange={handleStatusChange}
+                    handleAutoSave={handleAutoSave}
+                    openCommentModal={openCommentModal}
+                    openHistoryModal={openHistoryModal}
+                    setSelectedCaseForAssignment={setSelectedCaseForAssignment}
+                />
+            ))}
+        </div>
+    )
+  }
 
   return (
     <>
@@ -345,7 +391,7 @@ export function DigitizationCasesTable({ filters, setAllFetchedCases, displayCas
             isOpen={!!selectedCaseForAssignment}
             onClose={() => setSelectedCaseForAssignment(null)}
             caseData={selectedCaseForAssignment}
-            assignableUsers={assignableUsers.filter(u => u.role === 'aforador' || u.role === 'coordinadora' || u.role === 'supervisor')}
+            assignableUsers={assignableUsers.filter(u => u.role === 'digitador' || u.role === 'coordinadora' || u.role === 'supervisor' || u.role === 'aforador')}
             onAssign={handleAssignDigitador}
             title="Asignar Digitador"
             description={`Seleccione un usuario para asignar al caso NE: ${selectedCaseForAssignment.ne}`}
