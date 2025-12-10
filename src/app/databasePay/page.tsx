@@ -33,8 +33,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
-import DatabaseSolicitudDetailView from '@/components/databasepay/DatabaseSolicitudDetailView';
 import { SearchResultsTable } from '@/components/databasepay/SearchResultsTable';
+import { DatabaseSolicitudDetailView } from '@/components/databasepay/DatabaseSolicitudDetailView';
 
 
 type SearchType = "dateToday" | "dateSpecific" | "dateRange" | "dateCurrentMonth";
@@ -100,9 +100,8 @@ export default function DatabasePage() {
   const [filterEstadoSolicitudInput, setFilterEstadoSolicitudInput] = useState('');
 
 
-  const [solicitudToViewInline, setSolicitudToViewInline] = useState<SolicitudRecord | null>(null);
-  const [isDetailViewVisible, setIsDetailViewVisible] = useState(false);
-
+  const [solicitudToViewInModal, setSolicitudToViewInModal] = useState<SolicitudRecord | null>(null);
+  
   const [isExporting, setIsExporting] = useState(false);
 
 
@@ -119,14 +118,12 @@ export default function DatabasePage() {
     setIsClient(true);
   }, []);
 
-  const handleViewDetailsInline = (solicitud: SolicitudRecord) => {
-    setSolicitudToViewInline(solicitud);
-    setIsDetailViewVisible(true);
+  const handleViewDetails = (solicitud: SolicitudRecord) => {
+    setSolicitudToViewInModal(solicitud);
   };
 
-  const handleBackToTable = () => {
-    setIsDetailViewVisible(false);
-    setSolicitudToViewInline(null);
+  const handleCloseDetailView = () => {
+    setSolicitudToViewInModal(null);
   };
 
   useEffect(() => {
@@ -577,8 +574,7 @@ export default function DatabasePage() {
     setError(null);
     setFetchedSolicitudes(null);
     setCurrentSearchTermForDisplay('');
-    setIsDetailViewVisible(false);
-    setSolicitudToViewInline(null);
+    setSolicitudToViewInModal(null);
 
     if (!preserveFilters) {
       setFilterSolicitudIdInput('');
@@ -885,24 +881,10 @@ export default function DatabasePage() {
     }
   };
 
-  if (!isClient || authLoading && !fetchedSolicitudes && !isDetailViewVisible) {
+  if (!isClient || authLoading) {
     return <div className="min-h-screen flex items-center justify-center grid-bg"><Loader2 className="h-12 w-12 animate-spin text-white" /></div>;
   }
   
-  if (isDetailViewVisible && solicitudToViewInline) {
-    return (
-      <AppShell>
-         <div className="py-2 md:py-5 max-w-4xl mx-auto">
-            <DatabaseSolicitudDetailView
-              solicitud={solicitudToViewInline}
-              isInlineView={true}
-              onBackToList={handleBackToTable}
-            />
-        </div>
-      </AppShell>
-    );
-  }
-
   const isUserAdminOrRevisor = user?.role === 'admin' || user?.role === 'revisor';
   const isUserCalificador = user?.role === 'calificador';
   const isUserAllowedToMarkUrgent = user?.role === 'autorevisor' || user?.role === 'autorevisor_plus' || user?.role === 'revisor';
@@ -958,7 +940,7 @@ export default function DatabasePage() {
                 onUpdateEmailMinutaStatus={handleUpdateEmailMinutaStatus}
                 onOpenMessageDialog={openMessageDialog}
                 onSaveMinuta={handleSaveMinuta}
-                onViewDetails={handleViewDetailsInline}
+                onViewDetails={handleViewDetails}
                 onOpenCommentsDialog={openCommentsDialog}
                 onDeleteSolicitud={handleDeleteSolicitudRequest} 
                 onRefreshSearch={() => handleSearch({ preserveFilters: true })}
@@ -1003,6 +985,14 @@ export default function DatabasePage() {
           </CardContent>
         </Card>
       </div>
+
+       {solicitudToViewInModal && (
+        <DatabaseSolicitudDetailView 
+            solicitud={solicitudToViewInModal}
+            isOpen={!!solicitudToViewInModal}
+            onClose={handleCloseDetailView}
+        />
+       )}
 
       <Dialog open={isCommentsDialogOpen} onOpenChange={closeCommentsDialog}>
         <DialogContent className="sm:max-w-2xl">
