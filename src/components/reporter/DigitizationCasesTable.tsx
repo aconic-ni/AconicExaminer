@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { db } from '@/lib/firebase';
@@ -34,7 +33,11 @@ interface DigitizationCasesTableProps {
 const formatDate = (date: Date | Timestamp | null | undefined): string => {
     if (!date) return 'N/A';
     const d = (date as Timestamp)?.toDate ? (date as Timestamp).toDate() : (date as Date);
-    return format(d, 'dd/MM/yy HH:mm', { locale: es });
+    if (d instanceof Date && !isNaN(d.getTime())) {
+        const formatString = 'dd/MM/yy HH:mm';
+        return format(d, formatString, { locale: es });
+    }
+    return 'Fecha Inválida';
 };
 
 const LastUpdateTooltip = ({ lastUpdate, caseCreation }: { lastUpdate?: LastUpdateInfo | null, caseCreation: Timestamp }) => {
@@ -133,20 +136,18 @@ export function DigitizationCasesTable({ filters, setAllFetchedCases, displayCas
     const fetchAssignableUsers = async () => {
         const usersMap = new Map<string, AppUser>();
         const rolesToFetch = ['aforador', 'coordinadora', 'supervisor', 'digitador'];
-        const roleQueries = rolesToFetch.map(role => query(collection(db, 'users'), where('role', '==', role)));
         
         try {
-            const querySnapshots = await Promise.all(roleQueries.map(q => getDocs(q)));
-            querySnapshots.forEach(snapshot => {
-                snapshot.forEach(doc => {
-                    const userData = { uid: doc.id, ...doc.data() } as AppUser;
-                    if (!usersMap.has(userData.uid) && userData.displayName) {
-                        usersMap.set(userData.uid, userData);
-                    }
-                });
+            const usersQuery = query(collection(db, 'users'), where('role', 'in', rolesToFetch));
+            const querySnapshot = await getDocs(usersQuery);
+            querySnapshot.forEach(doc => {
+                const userData = { uid: doc.id, ...doc.data() } as AppUser;
+                if (!usersMap.has(userData.uid) && userData.displayName) {
+                    usersMap.set(userData.uid, userData);
+                }
             });
             setAssignableUsers(Array.from(usersMap.values()));
-        } catch(e) {
+        } catch (e) {
             console.error("Error fetching users for digitization table", e);
         }
     };
@@ -243,8 +244,8 @@ export function DigitizationCasesTable({ filters, setAllFetchedCases, displayCas
   
   const canEdit = user?.role === 'admin' || user?.role === 'coordinadora' || user?.roleTitle === 'supervisor';
   const isDigitador = user?.role === 'digitador';
-
-   if (isMobile) {
+  
+  if (isMobile) {
     return (
         <div className="space-y-4">
             {displayCases.map((caseItem) => (
@@ -390,7 +391,7 @@ export function DigitizationCasesTable({ filters, setAllFetchedCases, displayCas
             isOpen={!!selectedCaseForAssignment}
             onClose={() => setSelectedCaseForAssignment(null)}
             caseData={selectedCaseForAssignment}
-            assignableUsers={assignableUsers.filter(u => u.role === 'digitador' || u.role === 'coordinadora' || u.role === 'supervisor')}
+            assignableUsers={assignableUsers.filter(u => u.role === 'digitador' || u.role === 'coordinadora' || u.role === 'supervisor' || u.role === 'aforador')}
             onAssign={handleAssignDigitador}
             title="Asignar Digitador"
             description={`Seleccione un usuario para asignar al caso NE: ${selectedCaseForAssignment.ne}`}
