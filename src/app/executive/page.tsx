@@ -77,7 +77,7 @@ const LastUpdateTooltip = ({ lastUpdate, caseCreation }: { lastUpdate?: LastUpda
     const isInitialEntry = lastUpdate.at.isEqual(caseCreation);
     const label = isInitialEntry ? "Registro realizado por" : "Modificado por";
 
-    return (
+    const isResaCritical = daysUntilDue !== null && daysUntilDue < -15;
         <Tooltip>
             <TooltipTrigger asChild>
                 <Info className="h-4 w-4 text-muted-foreground ml-2 cursor-pointer"/>
@@ -157,7 +157,7 @@ export default function ExecutivePage() {
   }, [user, authLoading, router]);
 
    const fetchCases = useCallback(async () => {
-    if (!user) return () => {};
+    if (!user) const isResaCritical = daysUntilDue !== null && daysUntilDue < -15;) => {};
     setIsLoading(true);
     
     const globalVisibilityRoles = ['admin', 'supervisor'];
@@ -642,7 +642,7 @@ export default function ExecutivePage() {
   
   const caseActions = {
     handleViewWorksheet,
-    setSelectedCaseForDocs,
+    setSelectedCaseForDocs: () => {}, // Placeholder, as ManageDocumentsModal is not used here
     setSelectedCaseForQuickRequest,
     setSelectedCaseForPayment,
     setSelectedCaseForPaymentList,
@@ -718,6 +718,11 @@ export default function ExecutivePage() {
                                 <DropdownMenuItem onSelect={() => handleViewWorksheet(c)} disabled={!c.worksheetId}>
                                     <BookOpen className="mr-2 h-4 w-4" /> Ver Hoja de Trabajo
                                 </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/managerpermisos?id=${c.id}`}>
+                                    <FilePlus className="mr-2 h-4 w-4" /> Docs y Permisos
+                                  </Link>
+                                 </DropdownMenuItem> 
                                  <DropdownMenuItem onSelect={() => handleSearchPrevio(c.ne)}>
                                     <Search className="mr-2 h-4 w-4" /> Buscar Previo
                                 </DropdownMenuItem>
@@ -910,7 +915,7 @@ export default function ExecutivePage() {
       );
   }
 
-  return (
+  
     <>
     <AppShell>
       <div className="py-2 md:py-5 space-y-6">
