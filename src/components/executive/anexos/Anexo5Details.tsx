@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
@@ -22,9 +23,9 @@ const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
   return formatDateFns(date, 'dd/MM/yy HH:mm', { locale: es });
 };
 
-const formatShortDate = (timestamp: Timestamp | null | undefined): string => {
+const formatShortDate = (timestamp: Timestamp | Date | null | undefined): string => {
   if (!timestamp) return 'N/A';
-  const date = timestamp.toDate();
+  const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
   return formatDateFns(date, 'dd/MM/yyyy');
 };
 
@@ -141,7 +142,7 @@ export const Anexo5Details: React.FC<{ worksheet: Worksheet; onClose: () => void
         
         <div className="grid grid-cols-2 gap-x-8 mb-4 print:mb-2">
           <div className="space-y-2 print:space-y-1">
-            <DetailItem label="Fecha" value={formatShortDate(worksheet.createdAt)} />
+            <DetailItem label="Fecha" value={formatShortDate(new Date())} />
             <DetailItem label="Empresa que solicita" value={worksheet.consignee} />
             <DetailItem label="RUC" value={worksheet.ruc} />
           </div>
