@@ -33,7 +33,7 @@ const formatCurrencyFetched = (amount?: number | string | null, currency?: strin
     if (currency === 'cordoba') prefix = 'C$';
     else if (currency === 'dolar') prefix = 'US$';
     else if (currency === 'euro') prefix = '€';
-    return `${prefix}${num.toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `${prefix}${num.toFixed(2)}`;
 };
 
 const renderSolicitudStatusBadges = (solicitud: SolicitudRecord) => {
@@ -61,7 +61,6 @@ export interface SearchResultsTableProps {
   onUpdateRecepcionDCStatus: (solicitudId: string, status: boolean) => Promise<void>;
   onUpdateEmailMinutaStatus: (solicitudId: string, status: boolean) => Promise<void>;
   onOpenMessageDialog: (solicitudId: string) => void;
-  // onOpenMinutaDialog: (solicitudId: string) => void;
   onSaveMinuta: (solicitudId: string, minutaNum?: string | null) => Promise<void>;
   onViewDetails: (solicitud: SolicitudRecord) => void;
   onOpenCommentsDialog: (solicitudId: string) => void;
@@ -110,7 +109,6 @@ export const SearchResultsTable: React.FC<SearchResultsTableProps> = ({
   onUpdateRecepcionDCStatus,
   onUpdateEmailMinutaStatus,
   onOpenMessageDialog,
-  // onOpenMinutaDialog,
   onSaveMinuta,
   onViewDetails,
   onOpenCommentsDialog,
@@ -176,7 +174,7 @@ export const SearchResultsTable: React.FC<SearchResultsTableProps> = ({
 
   const isGuardadoPorFilterDisabled = currentUserRole === 'autorevisor' || currentUserRole === 'autorevisor_plus';
   const canUserValidateDuplicates = currentUserRole === 'calificador' || currentUserRole === 'admin' || currentUserRole === 'supervisor';
-  const canModifyPaymentStatus = currentUserRole === 'calificador' || currentUserRole === 'admin' || currentUserRole === 'supervisor';
+  const canModifyPaymentStatus = currentUserRole === 'calificador' || currentUserRole === 'admin' || currentUserRole === 'supervisor' || currentUserRole === 'revisor';
 
   return (
     <Card className="mt-6 w-full custom-shadow">
@@ -460,25 +458,18 @@ export const SearchResultsTable: React.FC<SearchResultsTableProps> = ({
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap text-sm">
-                    {canModifyPaymentStatus ? (
                       <div className="flex items-center space-x-2">
                         <Switch
-                          checked={solicitud.paymentStatus === 'Pagado'}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              if (isMinutaValidationEnabled) {
-                                // onOpenMinutaDialog(solicitud.solicitudId);
-                              } else {
-                                onSaveMinuta(solicitud.solicitudId, null); 
-                              }
-                            } else {
-                              if (solicitud.paymentStatus === 'Pagado') {
-                                onUpdatePaymentStatus(solicitud.solicitudId, null);
-                              }
-                            }
-                          }}
-                          disabled={solicitud.isMemorandum}
-                          aria-label="Marcar como pagado / pendiente"
+                            checked={solicitud.paymentStatus === 'Pagado'}
+                            onCheckedChange={(checked) => {
+                                if (checked) {
+                                    onSaveMinuta(solicitud.solicitudId, null);
+                                } else if (solicitud.paymentStatus === 'Pagado') {
+                                    onUpdatePaymentStatus(solicitud.solicitudId, null);
+                                }
+                            }}
+                            disabled={!canModifyPaymentStatus || solicitud.isMemorandum}
+                            aria-label="Marcar como pagado / pendiente"
                         />
                         <Button variant="ghost" size="icon" onClick={() => onOpenMessageDialog(solicitud.solicitudId)} aria-label="Añadir mensaje de error" className="h-7 w-7 p-0" disabled={solicitud.isMemorandum}>
                           <MessageSquare className="h-4 w-4 text-muted-foreground hover:text-primary" />
@@ -529,63 +520,9 @@ export const SearchResultsTable: React.FC<SearchResultsTableProps> = ({
                           </TooltipProvider>
                         )}
                       </div>
-                    ) : (
-                      <div className="flex items-center space-x-1">
-                        {solicitud.paymentStatus === 'Pagado' ? (
-                          <Badge className="bg-green-100 text-green-700 hover:bg-green-200 flex items-center">
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1"/> Pagado
-                          </Badge>
-                        ) : solicitud.paymentStatus && solicitud.paymentStatus.startsWith('Error:') ? (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="destructive" className="cursor-help flex items-center">
-                                    <AlertCircle className="h-3.5 w-3.5 mr-1"/> Error
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{solicitud.paymentStatus}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ) : (
-                          <Badge variant="outline">Pendiente</Badge>
-                        )}
-                        {solicitud.minutaNumber && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 p-0">
-                                  <FileSignature className="h-4 w-4 text-muted-foreground" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent className="text-xs">
-                                <p>Minuta No: {solicitud.minutaNumber}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                        {(solicitud.paymentStatusLastUpdatedAt || solicitud.paymentStatusLastUpdatedBy) && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 p-0">
-                                  <InfoIcon className="h-4 w-4 text-muted-foreground" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent className="text-xs">
-                                <p>Última actualización (Pago):</p>
-                                {solicitud.paymentStatusLastUpdatedBy && <p>Por: {solicitud.paymentStatusLastUpdatedBy}</p>}
-                                {solicitud.paymentStatusLastUpdatedAt && solicitud.paymentStatusLastUpdatedAt instanceof Date && <p>Fecha: {format(solicitud.paymentStatusLastUpdatedAt, "Pp", { locale: es })}</p>}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                      </div>
-                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap text-sm">
-                     {canModifyPaymentStatus ? (
+                     {currentUserRole === 'calificador' ? (
                         <div className="flex items-center space-x-2">
                             <Checkbox
                                 checked={!!solicitud.recepcionDCStatus}
@@ -659,7 +596,7 @@ export const SearchResultsTable: React.FC<SearchResultsTableProps> = ({
                         />
                         {solicitud.emailMinutaStatus ? (
                           <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-200 flex items-center">
-                            <CheckSquareIcon className="h-3.5 w-3.5 mr-1"/> Notificado
+                             <CheckSquareIcon className="h-3.5 w-3.5 mr-1"/> Notificado
                           </Badge>
                         ) : (
                           <Badge variant="outline">Pendiente</Badge>
