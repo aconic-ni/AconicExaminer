@@ -77,7 +77,7 @@ const LastUpdateTooltip = ({ lastUpdate, caseCreation }: { lastUpdate?: LastUpda
     const isInitialEntry = lastUpdate.at.isEqual(caseCreation);
     const label = isInitialEntry ? "Registro realizado por" : "Modificado por";
 
-    const isResaCritical = daysUntilDue !== null && daysUntilDue < -15;
+    return (
         <Tooltip>
             <TooltipTrigger asChild>
                 <Info className="h-4 w-4 text-muted-foreground ml-2 cursor-pointer"/>
@@ -157,7 +157,7 @@ export default function ExecutivePage() {
   }, [user, authLoading, router]);
 
    const fetchCases = useCallback(async () => {
-    if (!user) const isResaCritical = daysUntilDue !== null && daysUntilDue < -15;) => {};
+    return (
     setIsLoading(true);
     
     const globalVisibilityRoles = ['admin', 'supervisor'];
@@ -915,7 +915,7 @@ export default function ExecutivePage() {
       );
   }
 
-  
+  return (
     <>
     <AppShell>
       <div className="py-2 md:py-5 space-y-6">
