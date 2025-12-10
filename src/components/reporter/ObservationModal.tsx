@@ -1,8 +1,7 @@
 
-
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -37,8 +36,16 @@ export function ObservationModal({ isOpen, onClose, caseData }: ObservationModal
 
   const form = useForm<ObservationFormData>({
     resolver: zodResolver(observationSchema),
-    defaultValues: { comment: caseData.observacionRevisor || '' },
+    defaultValues: { comment: '' },
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      form.reset({
+        comment: caseData.observacionRevisor || ''
+      });
+    }
+  }, [isOpen, caseData, form]);
 
   const canEdit = user?.roleTitle === 'agente aduanero' || user?.role === 'admin' || user?.role === 'supervisor';
 
