@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, type ReactNode } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { SolicitudRecord } from '@/types';
 import { Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,10 @@ export function DatabaseSolicitudDetailView({ solicitud, isOpen, onClose }: Data
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl p-0 h-[90vh] flex flex-col">
+         <DialogHeader className="sr-only">
+          <DialogTitle>Detalles de la Solicitud</DialogTitle>
+          <DialogDescription>Contenido detallado de la solicitud de pago seleccionada.</DialogDescription>
+        </DialogHeader>
         {isLoading ? (
           <div className="flex justify-center items-center h-full">
             <Loader2 className="h-8 w-8 animate-spin" />
