@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { X, Printer, FileText, User, Building, Weight, Truck, MapPin, Anchor, Plane, Globe, Package, ListChecks, FileSymlink, Link as LinkIcon, Eye, Shield, FileBadge, FileKey, Edit } from 'lucide-react';
+import { X, Printer, FileText, User, Building, Weight, Truck, MapPin, Anchor, Plane, Globe, Package, ListChecks, FileSymlink, Link as LinkIcon, Eye, Shield, FileBadge, FileKey, Edit, Calendar } from 'lucide-react';
 import type { Worksheet, AppUser } from '@/types';
 import { Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,9 +23,9 @@ const formatTimestamp = (timestamp: Timestamp | null | undefined): string => {
   return formatDateFns(date, 'dd/MM/yy HH:mm', { locale: es });
 };
 
-const formatShortDate = (timestamp: Timestamp | null | undefined): string => {
+const formatShortDate = (timestamp: Timestamp | Date | null | undefined): string => {
   if (!timestamp) return 'N/A';
-  const date = timestamp.toDate();
+  const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
   return formatDateFns(date, 'dd/MM/yyyy');
 };
 
@@ -157,6 +157,7 @@ export const WorksheetDetails: React.FC<{ worksheet: Worksheet; onClose: () => v
                   <DetailItem label="NE" value={worksheet.ne} icon={FileText} />
                   <DetailItem label="Referencia" value={worksheet.reference} icon={FileText} />
                   <DetailItem label="Ejecutivo" value={worksheet.executive} icon={User} />
+                  <DetailItem label="ETA" value={formatShortDate(worksheet.eta)} icon={Calendar} />
                   <DetailItem label="Peso Bruto" value={worksheet.grossWeight} icon={Weight} />
                   <DetailItem label="Peso Neto" value={worksheet.netWeight} icon={Weight} />
                   <DetailItem label="Número de Bultos" value={worksheet.packageNumber} icon={Package} />
