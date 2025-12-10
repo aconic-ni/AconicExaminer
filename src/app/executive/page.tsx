@@ -157,7 +157,7 @@ export default function ExecutivePage() {
   }, [user, authLoading, router]);
 
    const fetchCases = useCallback(async () => {
-    return (
+    if (!user) return () => {};
     setIsLoading(true);
     
     const globalVisibilityRoles = ['admin', 'supervisor'];
@@ -1046,6 +1046,7 @@ export default function ExecutivePage() {
         </Tabs>
       </div>
     </AppShell>
+    {selectedCaseForDocs && (<ManageDocumentsForm caseData={selectedCaseForDocs} onClose={() => setSelectedCaseForDocsModal(null)} />)}
     {selectedCaseForHistory && (<AforoCaseHistoryModal isOpen={!!selectedCaseForHistory} onClose={() => setSelectedCaseForHistory(null)} caseData={selectedCaseForHistory} />)}
     {selectedCaseForIncident && (<IncidentReportModal isOpen={!!selectedCaseForIncident} onClose={() => setSelectedCaseForIncident(null)} caseData={selectedCaseForIncident} />)}
     {selectedCaseForValueDoubt && (<ValueDoubtModal isOpen={!!selectedCaseForValueDoubt} onClose={() => setSelectedCaseForValueDoubt(null)} caseData={selectedCaseForValueDoubt} />)}
