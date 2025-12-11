@@ -18,7 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import { X, Loader2, PlusCircle, Trash2, CheckSquare, Square, Receipt, Check, ChevronsUpDown, RotateCcw, ArrowLeft, Settings, Edit } from 'lucide-react';
+import { X, Loader2, PlusCircle, Trash2, CheckSquare, Square, Receipt, Check, ChevronsUpDown, RotateCcw, ArrowLeft, Settings, Edit, Truck } from 'lucide-react';
 import type { AforoCase, AforoCaseUpdate, RequiredPermit, DocumentStatus, Worksheet, AppUser, WorksheetDocument } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -150,9 +150,7 @@ function WorksheetForm() {
   const [editingPermit, setEditingPermit] = useState<{ permit: Partial<RequiredPermit>, index: number } | null>(null);
   const [pendingPermitData, setPendingPermitData] = useState<Partial<RequiredPermit> | null>(null);
   const [editingWorksheetId, setEditingWorksheetId] = useState<string | null>(null);
-  const [originalWorksheet, setOriginalWorksheet] = useState<Worksheet | null>(null);
   const [tlcNumberInput, setTlcNumberInput] = useState('');
-  const [isTransportDocOriginal, setIsTransportDocOriginal] = useState(false);
 
 
   const form = useForm<WorksheetFormData>({
@@ -178,8 +176,7 @@ function WorksheetForm() {
         const wsDocRef = doc(db, 'worksheets', id);
         const wsSnap = await getDoc(wsDocRef);
         if (wsSnap.exists()) {
-          const data = {id: wsSnap.id, ...wsSnap.data()} as Worksheet;
-          setOriginalWorksheet(data);
+          const data = wsSnap.data();
           // Convert Firestore Timestamps to JS Dates for the form
           const formData: Partial<WorksheetFormData> = {
             ...data,
@@ -199,7 +196,7 @@ function WorksheetForm() {
     }
   }, [searchParams, form, toast]);
   
-  const { fields: docFields, append: appendDoc, remove: rhfRemoveDoc } = useFieldArray({
+  const { fields: docFields, append: appendDoc, remove: rhfRemoveDoc, update: updateDocField } = useFieldArray({
     control: form.control, name: "documents",
   });
   const { fields: permitFields, append: appendPermit, remove: removePermit, update: updatePermitField } = useFieldArray({
@@ -246,7 +243,7 @@ function WorksheetForm() {
         const execRoles = ['admin', 'supervisor', 'coordinadora', 'ejecutivo'];
         const isManagement = execRoles.includes(user.role || '');
         if (isManagement) {
-            const execQuery = query(collection(db, 'users'), where('role', 'in', ['ejecutivo', 'coordinadora']));
+            const execQuery = query(collection(db, 'users'), where('role', '==', 'ejecutivo'));
             const querySnapshot = await getDocs(execQuery);
             setGroupMembers(querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser)));
         }
@@ -256,6 +253,36 @@ function WorksheetForm() {
     };
     fetchUsers();
   }, [user]);
+
+  const handleDocumentFormatChange = async (index: number, isCopy: boolean) => {
+    const currentDocuments = form.getValues('documents');
+    const docToUpdate = currentDocuments[index];
+    
+    if (!docToUpdate || !editingWorksheetId) return;
+
+    const oldValue = docToUpdate.isCopy;
+    if (oldValue === isCopy) return;
+
+    const newDocuments = [...currentDocuments];
+    newDocuments[index] = { ...docToUpdate, isCopy: isCopy };
+    updateDocField(index, newDocuments[index]);
+    
+    const worksheetDocRef = doc(db, 'worksheets', editingWorksheetId);
+    
+    try {
+        await updateDoc(worksheetDocRef, { documents: newDocuments });
+        toast({
+            title: "Formato de Documento Actualizado",
+            description: `El documento '${docToUpdate.number}' se marcó como ${isCopy ? 'Copia' : 'Original'}.`,
+        });
+    } catch (error) {
+        console.error("Error updating document format:", error);
+        toast({ title: "Error", description: "No se pudo actualizar el formato del documento.", variant: "destructive" });
+        // Revert UI change
+        newDocuments[index] = { ...docToUpdate, isCopy: oldValue };
+        updateDocField(index, newDocuments[index]);
+    }
+  };
 
   const addDocument = () => {
     if (docType.trim() && docNumber.trim()) {
@@ -269,7 +296,7 @@ function WorksheetForm() {
   const handleAddTlc = () => {
     const tlcName = form.getValues('tlcName');
     if (tlcName && tlcNumberInput) {
-        appendDoc({ id: uuidv4(), type: `TLC: ${tlcName}`, number: tlcNumberInput, isCopy: !isOriginal, status: 'Entregado'});
+        appendDoc({ id: uuidv4(), type: `TLC: ${tlcName}`, number: tlcNumberInput, isCopy: false, status: 'Entregado'});
         toast({ title: 'TLC añadido a documentos'});
         form.setValue('tlcName', '');
         setTlcNumberInput('');
@@ -281,7 +308,7 @@ function WorksheetForm() {
   const handleAddModexo = () => {
       const modexoCode = form.getValues('modexoCode');
       if (modexoCode) {
-          appendDoc({ id: uuidv4(), type: 'MODEXO', number: modexoCode, isCopy: !isOriginal, status: 'Entregado'});
+          appendDoc({ id: uuidv4(), type: 'MODEXO', number: modexoCode, isCopy: false, status: 'Entregado'});
           toast({ title: 'MODEXO añadido a documentos'});
           form.setValue('modexoCode', '');
       } else {
@@ -297,7 +324,7 @@ function WorksheetForm() {
             id: uuidv4(),
             type: typeLabel,
             number: `${transportDocumentNumber} (${transportCompany || 'N/A'})`,
-            isCopy: !isTransportDocOriginal,
+            isCopy: false,
             status: 'Entregado'
         });
         toast({ title: 'Documento de transporte añadido' });
@@ -411,70 +438,22 @@ function WorksheetForm() {
 
   const onSubmit = async (data: WorksheetFormData) => {
     if (!user || !user.displayName) {
-      toast({ title: 'Error', description: 'Debe estar autenticado.', variant: 'destructive'});
-      return;
+        toast({ title: 'Error', description: 'Debe estar autenticado.', variant: 'destructive' });
+        return;
     }
     if (!data.ne) {
-      toast({ title: 'Error', description: 'El campo NE no puede estar vacío.', variant: 'destructive'});
-      return;
+        toast({ title: 'Error', description: 'El campo NE no puede estar vacío.', variant: 'destructive' });
+        return;
     }
   
     setIsSubmitting(true);
-    
-    if (editingWorksheetId) {
-      const worksheetDocRef = doc(db, 'worksheets', editingWorksheetId);
-      const aforoCaseDocRef = doc(db, 'AforoCases', editingWorksheetId);
-      const batch = writeBatch(db);
-
-      try {
-        const updatedWorksheetData = { 
-            ...data, 
-            lastUpdatedAt: Timestamp.now(),
-            createdBy: originalWorksheet?.createdBy || user.email // Preserve original creator
-        };
-        batch.update(worksheetDocRef, updatedWorksheetData);
-        batch.update(aforoCaseDocRef, {
-            executive: data.executive,
-            consignee: data.consignee,
-            facturaNumber: data.facturaNumber,
-            merchandise: data.description,
-            aforador: data.aforador || '',
-        });
-
-        const logRef = doc(collection(aforoCaseDocRef, 'actualizaciones'));
-        const updateLog: AforoCaseUpdate = {
-          updatedAt: Timestamp.now(),
-          updatedBy: user.displayName,
-          field: 'document_update',
-          oldValue: 'worksheet',
-          newValue: 'worksheet_updated',
-          comment: `Hoja de trabajo modificada por ${user.displayName}.`,
-        };
-        batch.set(logRef, updateLog);
-        
-        await batch.commit();
-        toast({ title: "Hoja de Trabajo Actualizada", description: `El registro para el NE ${editingWorksheetId} ha sido guardado.` });
-        router.push('/executive');
-
-      } catch(serverError: any) {
-         const permissionError = new FirestorePermissionError({
-          path: `batch update to worksheets/${editingWorksheetId} and AforoCases/${editingWorksheetId}`,
-          operation: 'update',
-          requestResourceData: { worksheetData: data },
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      } finally {
-        setIsSubmitting(false);
-      }
-
-    } else {
-      const neTrimmed = data.ne.trim().toUpperCase();
-      const worksheetDocRef = doc(db, 'worksheets', neTrimmed);
-      const aforoCaseDocRef = doc(db, 'AforoCases', neTrimmed);
-
-      try {
+    const neTrimmed = data.ne.trim().toUpperCase();
+    const worksheetDocRef = doc(db, 'worksheets', neTrimmed);
+    const aforoCaseDocRef = doc(db, 'AforoCases', neTrimmed);
+  
+    try {
         const [worksheetSnap, aforoCaseSnap] = await Promise.all([getDoc(worksheetDocRef), getDoc(aforoCaseDocRef)]);
-        
+
         if (worksheetSnap.exists() || aforoCaseSnap.exists()) {
             toast({ title: "Registro Duplicado", description: `Ya existe un registro con el NE ${neTrimmed}.`, variant: "destructive" });
             setIsSubmitting(false);
@@ -558,13 +537,12 @@ function WorksheetForm() {
     } finally {
         setIsSubmitting(false);
     }
-    }
   };
 
   return (
     <>
     <Card className="w-full max-w-6xl mx-auto">
-      <CardHeader><CardTitle className="text-2xl">{editingWorksheetId ? 'Editar Hoja de Trabajo' : 'Nueva Hoja de Trabajo'}</CardTitle><CardDescription>{editingWorksheetId ? `Modificando la hoja de trabajo para el NE: ${editingWorksheetId}` : 'Complete la información para generar el registro.'}</CardDescription></CardHeader>
+      <CardHeader><CardTitle className="text-2xl">Nueva Hoja de Trabajo</CardTitle><CardDescription>Complete la información para generar el registro.</CardDescription></CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
@@ -575,7 +553,7 @@ function WorksheetForm() {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>NE</FormLabel>
-                            <FormControl><Input {...field} disabled={!!editingWorksheetId} /></FormControl>
+                            <FormControl><Input {...field} /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
@@ -588,7 +566,7 @@ function WorksheetForm() {
                     <FormItem>
                       <FormLabel>Ejecutivo</FormLabel>
                       {['admin', 'supervisor', 'coordinadora'].includes(user?.role || '') ? (
-                         <Select onValueChange={field.onChange} value={field.value}>
+                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                            <FormControl>
                              <SelectTrigger>
                                <SelectValue placeholder="Seleccionar ejecutivo..." />
@@ -636,7 +614,7 @@ function WorksheetForm() {
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Asignar Aforador (para PSMT)</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
                                     <SelectValue placeholder="Seleccionar aforador..." />
@@ -672,32 +650,18 @@ function WorksheetForm() {
                     />
                 </div>
                 
-                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4 items-start border-t pt-4">
-                  <div className="space-y-4">
-                    <FormField control={form.control} name="appliesTLC" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel>Aplica TLC</FormLabel></FormItem>)} />
-                    {watchAppliesTLC && (
-                      <div className="space-y-2 pl-4">
+                 <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                    <div className="space-y-2">
                         <FormField control={form.control} name="tlcName" render={({ field }) => (<FormItem><FormLabel>Nombre TLC</FormLabel><FormControl><Input placeholder="Nombre del Tratado" {...field} /></FormControl><FormMessage /></FormItem>)} />
                         <div className="flex items-center gap-2">
                             <Input value={tlcNumberInput} onChange={e => setTlcNumberInput(e.target.value)} placeholder="Número de TLC" className="flex-grow" />
-                             <div className="flex items-center gap-2 pt-5"><Switch checked={isOriginal} onCheckedChange={setIsOriginal} /><Label>Original</Label></div>
                             <Button type="button" size="sm" onClick={handleAddTlc} className="shrink-0">Añadir Doc.</Button>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                   <div className="space-y-4">
-                      <FormField control={form.control} name="appliesModexo" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3"><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel>Aplica Modexo</FormLabel></FormItem>)} />
-                      {watchAppliesModexo && (
-                         <div className="space-y-2 pl-4">
-                          <FormField control={form.control} name="modexoCode" render={({ field }) => (<FormItem><FormLabel>Código Modexo</FormLabel><FormControl><Input placeholder="Código Modexo" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                           <div className="flex items-center gap-2">
-                             <div className="flex items-center gap-2 pt-5"><Switch checked={isOriginal} onCheckedChange={setIsOriginal} /><Label>Original</Label></div>
-                             <Button type="button" size="sm" variant="outline" onClick={handleAddModexo} className="w-full">Añadir Modexo como Documento</Button>
-                           </div>
-                        </div>
-                      )}
-                  </div>
+                    </div>
+                     <div className="space-y-2">
+                        <FormField control={form.control} name="modexoCode" render={({ field }) => (<FormItem><FormLabel>Código Modexo</FormLabel><FormControl><Input placeholder="Código Modexo" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <Button type="button" size="sm" variant="outline" onClick={handleAddModexo} className="w-full">Añadir Modexo como Documento</Button>
+                    </div>
                  </div>
                 
                 <div className="lg:col-span-3">
@@ -910,8 +874,8 @@ function WorksheetForm() {
                                     <Label htmlFor="factura-number">Número(s) de Factura</Label>
                                     <Input id="factura-number" value={facturaNumberInput} onChange={e => setFacturaNumberInput(e.target.value)} />
                                     <div className="flex items-center space-x-2">
-                                        <Switch id="factura-original" checked={!facturaIsOriginal} onCheckedChange={(checked) => setFacturaIsOriginal(!checked)} />
-                                        <Label htmlFor="factura-original">{facturaIsOriginal ? "Original" : "Copia"}</Label>
+                                        <Switch id="factura-original" checked={facturaIsOriginal} onCheckedChange={setFacturaIsOriginal} />
+                                        <Label htmlFor="factura-original">Es Original</Label>
                                     </div>
                                     <Button onClick={handleAddFactura}>Guardar Factura(s)</Button>
                                 </div>
@@ -953,23 +917,27 @@ function WorksheetForm() {
                             <FormItem><FormLabel>Número</FormLabel><FormControl><Input {...field} placeholder="Número del documento" /></FormControl><FormMessage /></FormItem>
                         )}/>
                     </div>
-                    <div className="flex items-center gap-4 mt-2">
-                        <div className="flex items-center space-x-2">
-                           <Switch id="transport-original" checked={isTransportDocOriginal} onCheckedChange={setIsTransportDocOriginal} />
-                           <Label htmlFor="transport-original">{isTransportDocOriginal ? "Original" : "Copia"}</Label>
-                        </div>
-                        <Button type="button" size="sm" variant="outline" onClick={handleAddTransportDoc}>Añadir a Documentos</Button>
-                    </div>
+                    <Button type="button" size="sm" variant="outline" className="mt-2" onClick={handleAddTransportDoc}>Añadir a Documentos</Button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto] gap-3 items-end mb-4 p-3 border rounded-md">
                      <div><Label>Tipo de Documento</Label><Input value={docType} onChange={e => setDocType(e.target.value)} placeholder="Ej: BL, Packing List" /></div>
                      <div><Label>Número</Label><Input value={docNumber} onChange={e => setDocNumber(e.target.value)} placeholder="Ej: 12345" /></div>
-                     <div className="flex items-center gap-2 pt-5"><Switch checked={isOriginal} onCheckedChange={setIsOriginal} /><Label>{isOriginal ? "Original" : "Copia"}</Label></div>
+                     <div className="flex items-center gap-2 pt-5"><Switch checked={isOriginal} onCheckedChange={setIsOriginal} /><Label>Es Original</Label></div>
                      <Button type="button" onClick={addDocument}><PlusCircle className="mr-2 h-4 w-4"/>Añadir</Button>
                 </div>
                 {docFields.length > 0 && (
                     <div className="rounded-md border"><Table><TableHeader><TableRow><TableHead>Tipo</TableHead><TableHead>Número</TableHead><TableHead>Formato</TableHead><TableHead className="text-right">Acción</TableHead></TableRow></TableHeader>
-                    <TableBody>{docFields.map((field, index) => (<TableRow key={field.id}><TableCell>{field.type}</TableCell><TableCell>{field.number}</TableCell><TableCell>{field.isCopy ? 'Copia' : 'Original'}</TableCell><TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => removeDoc(index)}><Trash2 className="h-4 w-4 text-destructive"/></Button></TableCell></TableRow>))}</TableBody>
+                    <TableBody>{docFields.map((field, index) => (<TableRow key={field.id}><TableCell>{field.type}</TableCell><TableCell>{field.number}</TableCell><TableCell>
+                        <div className="flex items-center gap-2">
+                           <Switch
+                              checked={!field.isCopy}
+                              onCheckedChange={(checked) => handleDocumentFormatChange(index, !checked)}
+                              disabled={isSubmitting || !editingWorksheetId}
+                              aria-label={field.isCopy ? 'Marcar como Original' : 'Marcar como Copia'}
+                            />
+                           <span>{field.isCopy ? 'Copia' : 'Original'}</span>
+                        </div>
+                    </TableCell><TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => removeDoc(index)}><Trash2 className="h-4 w-4 text-destructive"/></Button></TableCell></TableRow>))}</TableBody>
                     </Table></div>
                 )}
             </div>
@@ -1165,7 +1133,7 @@ function WorksheetForm() {
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Guardar Hoja de Trabajo
                 </Button>
-            </div>
+              </div>
           </form>
         </Form>
       </CardContent>
@@ -1193,5 +1161,3 @@ export default function WorksheetPage() {
         </AppShell>
     )
 }
-
-    
