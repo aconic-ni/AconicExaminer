@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState, useMemo, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -582,12 +583,12 @@ function ExecutivePageContent() {
       return filtered;
     } else {
         // Not searching, return top 15 of the current tab
-        return filtered;
+        return filtered.slice(0, 15);
     }
   }, [allCases, appliedFilters, activeTab, neFilter, ejecutivoFilter, consignatarioFilter, facturaFilter, selectividadFilter, incidentTypeFilter]);
   
   const totalPages = Math.ceil(filteredCases.length / itemsPerPage);
-  const paginatedCases = appliedFilters.isSearchActive ? filteredCases.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage) : filteredCases.slice(0, 15);
+  const paginatedCases = appliedFilters.isSearchActive ? filteredCases.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage) : filteredCases;
   
   const getDigitacionBadge = (status?: DigitacionStatus, declaracion?: string | null) => {
     const isCompleted = status === 'Trámite Completo';
@@ -683,8 +684,11 @@ function ExecutivePageContent() {
       if (isLoading) {
         return <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
       }
-      if (paginatedCases.length === 0) {
+      if (paginatedCases.length === 0 && appliedFilters.isSearchActive) {
         return <p className="text-muted-foreground text-center py-10">No se encontraron casos con los filtros actuales.</p>;
+      }
+      if (paginatedCases.length === 0 && !appliedFilters.isSearchActive) {
+        return <p className="text-muted-foreground text-center py-10">No hay casos recientes para mostrar. Use la búsqueda para encontrar casos más antiguos.</p>;
       }
       if (isMobile) {
         return (
