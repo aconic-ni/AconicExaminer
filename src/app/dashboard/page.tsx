@@ -89,7 +89,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (authLoading || !user || !alloweds.includes(user. as string)) {
+  if (authLoading || !user || !allowedRoles.includes(user.role as string)) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
   
@@ -145,8 +145,8 @@ export default function DashboardPage() {
   }
   
   const getDefaultTab = () => {
-    if(user. === 'ejecutivo') return 'ejecutivo';
-    if(user. === 'admin') return 'ejecutivo';
+    if(user.role === 'ejecutivo') return 'ejecutivo';
+    if(user.role === 'admin') return 'ejecutivo';
     if(user.role === 'coordinadora' || user.role === 'aforador') return 'previos';
     return 'ejecutivo';
   }
@@ -184,3 +184,4 @@ export default function DashboardPage() {
     </AppShell>
   );
 }
+
