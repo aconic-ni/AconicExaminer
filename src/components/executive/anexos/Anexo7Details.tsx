@@ -178,6 +178,8 @@ export const Anexo7Details: React.FC<{ worksheet: Worksheet; onClose: () => void
                                 <td className="border-r border-black"></td>
                                 <td className="border-r border-black"></td>
                                 <td className="border-r border-black"></td>
+                                <td className="border-r border-black"></td>
+                                <td className="border-r border-black"></td>
                                 <td></td>
                             </tr>
                         ))}
