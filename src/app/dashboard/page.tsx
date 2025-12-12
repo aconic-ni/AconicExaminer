@@ -34,7 +34,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const allowedRoles = ['aforador', 'coordinadora', 'admin', 'ejecutivo'];
+  const allowedRoles = ['aforador', 'coordinadora', 'admin', 'ejecutivo', 'supervisor'];
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -89,7 +89,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (authLoading || !user || !allowedRoles.includes(user.role as string)) {
+  if (authLoading || !user || !alloweds.includes(user. as string)) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
   
@@ -145,8 +145,8 @@ export default function DashboardPage() {
   }
   
   const getDefaultTab = () => {
-    if(user.role === 'ejecutivo') return 'ejecutivo';
-    if(user.role === 'admin') return 'ejecutivo';
+    if(user. === 'ejecutivo') return 'ejecutivo';
+    if(user. === 'admin') return 'ejecutivo';
     if(user.role === 'coordinadora' || user.role === 'aforador') return 'previos';
     return 'ejecutivo';
   }
